@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Control Consumo Cannabis Pro</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Control Consumo Cannabis Pro</h1>
+  </header>
+
+  <!-- Barra de pestañas -->
+  <div class="tabs">
+    <button data-tab="login-tab">Iniciar Sesión</button>
+    <button data-tab="add-tab" disabled>Agregar</button>
+    <button data-tab="view-tab" disabled>Registros</button>
+    <button data-tab="stats-tab" disabled>Estadísticas</button>
+    <button data-tab="rec-tab" disabled>Recomendaciones</button>
+    <button data-tab="social-tab" disabled>Desempeño Social</button>
+    <button id="logoutBtn" hidden>🔒 Cerrar sesión</button>
+  </div>
+
+  <main>
+    <!-- Iniciar sesión -->
+    <section id="login-tab" class="tab active">
+      <form>
+        <label for="usernameInput">Nombre de usuario:</label>
+        <input type="text" id="usernameInput" />
+        <button type="button" id="loginBtn">Entrar</button>
+        <div id="loginMsg"></div>
+      </form>
+    </section>
+
+    <!-- Agregar registro -->
+    <section id="add-tab" class="tab">
+      <form id="addForm">
+        <label for="fecha">Fecha:</label>
+        <input type="date" id="fecha" required />
+
+        <label for="tipo">Tipo:</label>
+        <select id="tipo" required>
+          <option value="" disabled selected>Selecciona tipo</option>
+          <option value="Índica">Índica</option>
+          <option value="Sativa">Sativa</option>
+          <option value="Híbrida">Híbrida</option>
+          <option value="CBD dominante">CBD dominante</option>
+        </select>
+
+        <label for="proveedor">Proveedor:</label>
+        <select id="proveedor" required>
+          <option value="" disabled selected>Selecciona proveedor</option>
+          <option value="Proveedor A">Proveedor A</option>
+          <option value="Proveedor B">Proveedor B</option>
+          <option value="Proveedor C">Proveedor C</option>
+          <option value="Proveedor D">Proveedor D</option>
+        </select>
+
+        <label for="cantidad">Cantidad (g):</label>
+        <input type="number" id="cantidad" placeholder="Cantidad (g)" min="0" step="0.1" required />
+
+        <label for="precio">Precio total ($):</label>
+        <input type="number" id="precio" placeholder="Precio total ($)" min="0" step="0.01" required />
+
+        <label for="motivo">Motivo:</label>
+        <select id="motivo" required>
+          <option value="" disabled selected>Selecciona motivo</option>
+          <option value="Relajación">Relajación</option>
+          <option value="Medicinal">Medicinal</option>
+          <option value="Recreativo">Recreativo</option>
+          <option value="Creatividad">Creatividad</option>
+          <option value="Dolor">Dolor</option>
+          <option value="Ansiedad">Ansiedad</option>
+        </select>
+
+        <label for="metodo">Método de consumo:</label>
+        <select id="metodo" required>
+          <option value="" disabled selected>Selecciona método</option>
+          <option value="Fumar">Fumar</option>
+          <option value="Vapear">Vapear</option>
+          <option value="Comestibles">Comestibles</option>
+          <option value="Tinturas">Tinturas</option>
+          <option value="Tópicos">Tópicos</option>
+        </select>
+
+        <label for="satisfaccion">Satisfacción (1-10):</label>
+        <select id="satisfaccion" required>
+          <option value="" disabled selected>Selecciona nivel</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+          <option value="7">7</option>
+          <option value="8">8</option>
+          <option value="9">9</option>
+          <option value="10">10</option>
+        </select>
+
+        <label for="efectos">Efectos secundarios:</label>
+        <input type="text" id="efectos" placeholder="Efectos secundarios" />
+
+        <label for="consciente">Consciente:</label>
+        <select id="consciente">
+          <option value="true">Consciente</option>
+          <option value="false">No consciente</option>
+        </select>
+
+        <button type="submit">Guardar Registro</button>
+        <div id="addMsg"></div>
+      </form>
+    </section>
+
+    <!-- Ver registros -->
+    <section id="view-tab" class="tab">
+      <input type="text" id="searchRecordsInput" placeholder="Buscar por tipo o proveedor" />
+      <div id="recordsList"></div>
+    </section>
+
+    <!-- Estadísticas -->
+    <section id="stats-tab" class="tab">
+      <h2>📈 Satisfacción mensual</h2>
+      <div class="chart-container"><canvas id="graficoSatisfaccion"></canvas></div>
+
+      <h2>🔥 Consumo mensual (gramos)</h2>
+      <div class="chart-container"><canvas id="graficoConsumoMensual"></canvas></div>
+
+      <h2>📊 Costo promedio por gramo</h2>
+      <div class="chart-container"><canvas id="graficoCostoGramo"></canvas></div>
+
+      <h2>🧪 Frecuencia por método</h2>
+      <div class="chart-container"><canvas id="graficoMetodo"></canvas></div>
+
+      <h2>🧠 Motivo vs. Satisfacción</h2>
+      <div class="chart-container"><canvas id="graficoMotivo"></canvas></div>
+    </section>
+
+    <!-- Recomendaciones -->
+    <section id="rec-tab" class="tab">
+      <h2>💡 Recomendaciones</h2>
+      <div id="recomendacionesBox"></div>
+    </section>
+
+    <!-- Desempeño Social -->
+    <section id="social-tab" class="tab">
+      <h2>🤝 Desempeño Social y Calidad de Vida</h2>
+      <p>Aquí podrás registrar y analizar cómo el consumo impacta en tu vida social, laboral y emocional.</p>
+
+      <form id="socialForm">
+        <label for="interaccionesSociales">Interacciones Sociales:</label>
+        <select id="interaccionesSociales" required>
+          <option value="" disabled selected>Selecciona nivel</option>
+          <option value="Bajo">Bajo</option>
+          <option value="Moderado">Moderado</option>
+          <option value="Alto">Alto</option>
+        </select>
+
+        <label for="desempenoLaboral">Desempeño Laboral/Estudios:</label>
+        <select id="desempenoLaboral" required>
+          <option value="" disabled selected>Selecciona nivel</option>
+          <option value="Bajo">Bajo</option>
+          <option value="Moderado">Moderado</option>
+          <option value="Alto">Alto</option>
+        </select>
+
+        <label for="estadoAnimo">Estado de Ánimo General:</label>
+        <select id="estadoAnimo" required>
+          <option value="" disabled selected>Selecciona estado</option>
+          <option value="Negativo">Negativo</option>
+          <option value="Neutral">Neutral</option>
+          <option value="Positivo">Positivo</option>
+        </select>
+
+        <button type="submit">Guardar Desempeño Social</button>
+        <div id="socialMsg"></div>
+      </form>
+
+      <h3>📊 Visualización de Desempeño Social</h3>
+      <div class="chart-container"><canvas id="graficoSocial"></canvas></div>
+    </section>
+  </main>
+
+  <footer>
+    &copy; 2025 ControlCannabisPro - Análisis inteligente de bienestar y consumo 🌿
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
