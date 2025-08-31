@@ -47,6 +47,17 @@ let chartCostoGramo = null;
 let chartMetodo = null;
 let chartMotivo = null;
 let chartDesempenoSocial = null;
+let chartDashboard = null;
+
+// Theme toggle
+const themeToggle = document.getElementById("themeToggle");
+
+// Export/Import
+const exportBtn = document.getElementById("exportBtn");
+const exportCSVBtn = document.getElementById("exportCSVBtn");
+const importBtn = document.getElementById("importBtn");
+const importFile = document.getElementById("importFile");
+const importMsg = document.getElementById("importMsg");
 
 /* =========================
    Utilidades
@@ -83,7 +94,7 @@ function cambiarTab(tabId) {
   if (sec) sec.classList.add("active");
 
   // Al mostrar una sección con gráficos, forzamos resize después del reflow
-  if (tabId === "stats-tab" || tabId === "social-tab") {
+  if (tabId === "stats-tab" || tabId === "social-tab" || tabId === "dashboard-tab") {
     setTimeout(resizeAllCharts, 50);
   }
 }
@@ -96,7 +107,7 @@ function limpiarLogin() {
 
 /** Forzar resize de todos los gráficos visibles */
 function resizeAllCharts() {
-  [chartSatisfaccion, chartConsumoMensual, chartCostoGramo, chartMetodo, chartMotivo, chartDesempenoSocial]
+  [chartSatisfaccion, chartConsumoMensual, chartCostoGramo, chartMetodo, chartMotivo, chartDesempenoSocial, chartDashboard]
     .forEach((ch) => {
       try {
         if (ch) ch.resize();
@@ -147,11 +158,35 @@ function guardarDatosSocial(data) {
    Render UI
    ========================= */
 function actualizarUI() {
+  actualizarDashboard();
   mostrarRegistros();
   inicializarGraficos();
   mostrarRecomendaciones();
   mostrarRegistrosSociales();
   inicializarGraficoSocial();
+  inicializarGraficoDashboard();
+}
+
+/** Actualiza las métricas del dashboard */
+function actualizarDashboard() {
+  const totalRegistrosEl = document.getElementById("totalRegistros");
+  const gastoTotalEl = document.getElementById("gastoTotal");
+  const consumoTotalEl = document.getElementById("consumoTotal");
+  const satisfaccionPromedioEl = document.getElementById("satisfaccionPromedio");
+
+  if (!totalRegistrosEl) return;
+
+  const totalRegistros = registros.length;
+  const gastoTotal = registros.reduce((sum, r) => sum + (Number(r.precioTotal) || 0), 0);
+  const consumoTotal = registros.reduce((sum, r) => sum + (Number(r.cantidadGramos) || 0), 0);
+  const satisfaccionPromedio = totalRegistros > 0 
+    ? registros.reduce((sum, r) => sum + (Number(r.satisfaccion) || 0), 0) / totalRegistros 
+    : 0;
+
+  totalRegistrosEl.textContent = totalRegistros.toLocaleString();
+  gastoTotalEl.textContent = `$${gastoTotal.toFixed(2)}`;
+  consumoTotalEl.textContent = `${consumoTotal.toFixed(1)}g`;
+  satisfaccionPromedioEl.textContent = `${satisfaccionPromedio.toFixed(1)}/10`;
 }
 
 /** Registros con filtro por tipo o proveedor */
@@ -555,6 +590,267 @@ function inicializarGraficos() {
   }
 }
 
+/** Gráfico resumen para dashboard - últimos 30 días */
+function inicializarGraficoDashboard() {
+  if (chartDashboard) {
+    chartDashboard.destroy();
+    chartDashboard = null;
+  }
+
+  if (!registros.length) return;
+
+  const ctx = ctxOf("graficoDashboard");
+  if (!ctx) return;
+
+  // Filtrar últimos 30 días
+  const hace30Dias = new Date();
+  hace30Dias.setDate(hace30Dias.getDate() - 30);
+
+  const registrosRecientes = registros.filter(r => {
+    const fechaRegistro = new Date(r.fecha);
+    return fechaRegistro >= hace30Dias;
+  });
+
+  if (registrosRecientes.length === 0) return;
+
+  // Agrupar por día
+  const datosPorDia = {};
+  registrosRecientes.forEach(r => {
+    const dia = r.fecha;
+    if (!datosPorDia[dia]) {
+      datosPorDia[dia] = { consumo: 0, gasto: 0, satisfaccion: 0, count: 0 };
+    }
+    datosPorDia[dia].consumo += Number(r.cantidadGramos) || 0;
+    datosPorDia[dia].gasto += Number(r.precioTotal) || 0;
+    datosPorDia[dia].satisfaccion += Number(r.satisfaccion) || 0;
+    datosPorDia[dia].count += 1;
+  });
+
+  const dias = Object.keys(datosPorDia).sort();
+  const consumoDiario = dias.map(d => datosPorDia[d].consumo);
+  const satisfaccionDiaria = dias.map(d => datosPorDia[d].satisfaccion / datosPorDia[d].count);
+
+  const gradient1 = crearGradienteVertical(ctx, "#00ffe7", "#007acc");
+  const gradient2 = crearGradienteVertical(ctx, "#ff6384", "#ff1744");
+
+  chartDashboard = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: dias.map(d => new Date(d).toLocaleDateString()),
+      datasets: [
+        {
+          label: "Consumo (g)",
+          data: consumoDiario,
+          borderColor: "#00ffe7",
+          backgroundColor: gradient1,
+          fill: false,
+          tension: 0.4,
+          yAxisID: "y",
+        },
+        {
+          label: "Satisfacción",
+          data: satisfaccionDiaria,
+          borderColor: "#ff6384",
+          backgroundColor: gradient2,
+          fill: false,
+          tension: 0.4,
+          yAxisID: "y1",
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false,
+      },
+      scales: {
+        x: {
+          ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-primary') },
+          grid: { display: false },
+        },
+        y: {
+          type: 'linear',
+          display: true,
+          position: 'left',
+          ticks: { color: "#00ffe7" },
+          grid: { color: "#00ffe755" },
+        },
+        y1: {
+          type: 'linear',
+          display: true,
+          position: 'right',
+          min: 0,
+          max: 10,
+          ticks: { color: "#ff6384" },
+          grid: { drawOnChartArea: false },
+        },
+      },
+      plugins: {
+        legend: { 
+          labels: { 
+            color: getComputedStyle(document.documentElement).getPropertyValue('--text-primary')
+          } 
+        },
+        tooltip: {
+          backgroundColor: "rgba(13, 17, 23, 0.9)",
+          titleColor: "#00ffe7",
+          bodyColor: "#c9d1d9",
+          cornerRadius: 8,
+        },
+      },
+      animation: { duration: 800 },
+    },
+  });
+}
+
+/* =========================
+   Export/Import Functions
+   ========================= */
+function exportarDatos() {
+  if (!usuarioActual || registros.length === 0) {
+    alert("No hay datos para exportar");
+    return;
+  }
+
+  const dataToExport = {
+    usuario: usuarioActual,
+    fechaExport: new Date().toISOString(),
+    registros: registros,
+    datosSocial: cargarDatosSocial(),
+    version: "2.0"
+  };
+
+  const dataStr = JSON.stringify(dataToExport, null, 2);
+  const dataBlob = new Blob([dataStr], { type: 'application/json' });
+
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(dataBlob);
+  link.download = `cannabis-control-${usuarioActual}-${new Date().toISOString().slice(0,10)}.json`;
+  link.click();
+}
+
+function exportarCSV() {
+  if (!usuarioActual || registros.length === 0) {
+    alert("No hay datos para exportar");
+    return;
+  }
+
+  const headers = [
+    "Fecha", "Tipo", "Proveedor", "Cantidad(g)", "Precio($)", 
+    "Motivo", "Método", "Satisfacción", "Efectos Secundarios"
+  ];
+
+  const csvContent = [
+    headers.join(","),
+    ...registros.map(r => [
+      r.fecha,
+      `"${r.tipo}"`,
+      `"${r.proveedor}"`,
+      r.cantidadGramos,
+      r.precioTotal,
+      `"${r.motivo}"`,
+      `"${r.metodoConsumo}"`,
+      r.satisfaccion,
+      `"${r.efectosSecundarios || ''}"`
+    ].join(","))
+  ].join("\n");
+
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `cannabis-control-${usuarioActual}-${new Date().toISOString().slice(0,10)}.csv`;
+  link.click();
+}
+
+function importarDatos(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const importedData = JSON.parse(e.target.result);
+
+      if (!importedData.registros || !Array.isArray(importedData.registros)) {
+        throw new Error("Formato de archivo inválido");
+      }
+
+      // Confirmación antes de importar
+      const confirmImport = confirm(
+        `¿Confirmas importar ${importedData.registros.length} registros? Esto se agregará a tus datos existentes.`
+      );
+
+      if (confirmImport) {
+        // Agregar registros importados a los existentes
+        registros.push(...importedData.registros);
+
+        // Importar datos sociales si existen
+        if (importedData.datosSocial && Array.isArray(importedData.datosSocial)) {
+          const datosSocialActuales = cargarDatosSocial();
+          datosSocialActuales.push(...importedData.datosSocial);
+          guardarDatosSocial(datosSocialActuales);
+        }
+
+        guardarDatos();
+        actualizarUI();
+
+        if (importMsg) {
+          importMsg.textContent = `✅ ${importedData.registros.length} registros importados correctamente`;
+          importMsg.style.color = "var(--success-color)";
+        }
+      }
+    } catch (error) {
+      if (importMsg) {
+        importMsg.textContent = "❌ Error: Archivo inválido o corrupto";
+        importMsg.style.color = "var(--danger-color)";
+      }
+    }
+
+    // Limpiar input
+    importFile.value = "";
+  };
+
+  reader.readAsText(file);
+}
+
+/* =========================
+   Theme Toggle
+   ========================= */
+function toggleTheme() {
+  const body = document.body;
+  const isLight = body.classList.contains("light-theme");
+
+  if (isLight) {
+    body.classList.remove("light-theme");
+    themeToggle.textContent = "🌙";
+    localStorage.setItem("theme", "dark");
+  } else {
+    body.classList.add("light-theme");
+    themeToggle.textContent = "☀️";
+    localStorage.setItem("theme", "light");
+  }
+
+  // Actualizar gráficos para el nuevo tema
+  setTimeout(() => {
+    resizeAllCharts();
+    inicializarGraficos();
+    inicializarGraficoSocial();
+    inicializarGraficoDashboard();
+  }, 100);
+}
+
+function aplicarTemaGuardado() {
+  const savedTheme = localStorage.getItem("theme");
+  if (savedTheme === "light") {
+    document.body.classList.add("light-theme");
+    if (themeToggle) themeToggle.textContent = "☀️";
+  } else {
+    if (themeToggle) themeToggle.textContent = "🌙";
+  }
+}
+
 /* =========================
    Desempeño Social
    ========================= */
@@ -689,7 +985,7 @@ if (loginBtn) {
     localStorage.setItem("usuarioActual", usuarioActual);
     cargarDatos();
     activarTabs(true);
-    cambiarTab("add-tab");
+    cambiarTab("dashboard-tab");
     limpiarLogin();
     actualizarUI();
   });
@@ -707,11 +1003,11 @@ if (logoutBtn) {
     if (recomendacionesBox) recomendacionesBox.innerHTML = "";
     if (loginMsg) loginMsg.textContent = "";
     // destruir gráficos
-    [chartSatisfaccion, chartConsumoMensual, chartCostoGramo, chartMetodo, chartMotivo, chartDesempenoSocial]
+    [chartSatisfaccion, chartConsumoMensual, chartCostoGramo, chartMetodo, chartMotivo, chartDesempenoSocial, chartDashboard]
       .forEach((ch) => {
         try { if (ch) ch.destroy(); } catch (e) {}
       });
-    chartSatisfaccion = chartConsumoMensual = chartCostoGramo = chartMetodo = chartMotivo = chartDesempenoSocial = null;
+    chartSatisfaccion = chartConsumoMensual = chartCostoGramo = chartMetodo = chartMotivo = chartDesempenoSocial = chartDashboard = null;
   });
 }
 
@@ -781,14 +1077,37 @@ if (socialForm) {
   });
 }
 
+// Theme toggle
+if (themeToggle) {
+  themeToggle.addEventListener("click", toggleTheme);
+}
+
+// Export/Import events
+if (exportBtn) {
+  exportBtn.addEventListener("click", exportarDatos);
+}
+
+if (exportCSVBtn) {
+  exportCSVBtn.addEventListener("click", exportarCSV);
+}
+
+if (importBtn) {
+  importBtn.addEventListener("click", () => importFile.click());
+}
+
+if (importFile) {
+  importFile.addEventListener("change", importarDatos);
+}
+
 /* =========================
    Inicialización
    ========================= */
 window.addEventListener("load", () => {
+  aplicarTemaGuardado();
   usuarioActual = localStorage.getItem("usuarioActual");
   if (usuarioActual) {
     activarTabs(true);
-    cambiarTab("add-tab");
+    cambiarTab("dashboard-tab");
     cargarDatos();
     actualizarUI();
   } else {

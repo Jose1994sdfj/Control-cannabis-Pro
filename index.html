@@ -16,11 +16,13 @@
   <!-- Barra de pestañas -->
   <div class="tabs">
     <button data-tab="login-tab">Iniciar Sesión</button>
+    <button data-tab="dashboard-tab" disabled>📊 Dashboard</button>
     <button data-tab="add-tab" disabled>Agregar</button>
     <button data-tab="view-tab" disabled>Registros</button>
     <button data-tab="stats-tab" disabled>Estadísticas</button>
     <button data-tab="rec-tab" disabled>Recomendaciones</button>
     <button data-tab="social-tab" disabled>Desempeño Social</button>
+    <button id="themeToggle" hidden>🌙</button>
     <button id="logoutBtn" hidden>🔒 Cerrar sesión</button>
   </div>
 
@@ -33,6 +35,54 @@
         <button type="button" id="loginBtn">Entrar</button>
         <div id="loginMsg"></div>
       </form>
+    </section>
+
+    <!-- Dashboard -->
+    <section id="dashboard-tab" class="tab">
+      <h2>📊 Dashboard - Resumen Ejecutivo</h2>
+
+      <div class="dashboard-grid">
+        <!-- Tarjetas de métricas -->
+        <div class="metric-card">
+          <h3>Total Registros</h3>
+          <div class="metric-value" id="totalRegistros">0</div>
+        </div>
+
+        <div class="metric-card">
+          <h3>Gasto Total</h3>
+          <div class="metric-value" id="gastoTotal">$0</div>
+        </div>
+
+        <div class="metric-card">
+          <h3>Consumo Total</h3>
+          <div class="metric-value" id="consumoTotal">0g</div>
+        </div>
+
+        <div class="metric-card">
+          <h3>Satisfacción Promedio</h3>
+          <div class="metric-value" id="satisfaccionPromedio">0/10</div>
+        </div>
+      </div>
+
+      <!-- Gráfico resumen en dashboard -->
+      <div class="dashboard-chart">
+        <h3>📈 Tendencia Últimos 30 días</h3>
+        <div class="chart-container">
+          <canvas id="graficoDashboard"></canvas>
+        </div>
+      </div>
+
+      <!-- Exportar/Importar datos -->
+      <div class="data-management">
+        <h3>💾 Gestión de Datos</h3>
+        <div class="export-import-buttons">
+          <button id="exportBtn" class="export-btn">📥 Exportar Datos (JSON)</button>
+          <button id="exportCSVBtn" class="export-btn">📊 Exportar a CSV</button>
+          <input type="file" id="importFile" accept=".json" hidden>
+          <button id="importBtn" class="import-btn">📤 Importar Datos</button>
+        </div>
+        <div id="importMsg"></div>
+      </div>
     </section>
 
     <!-- Agregar registro -->
