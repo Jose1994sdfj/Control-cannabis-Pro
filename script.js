@@ -723,153 +723,159 @@ function exportarPDF() {
     exportMsg.style.color = "var(--accent-primary)";
   }
 
-  // Crear contenido HTML para el PDF
-  const fecha = new Date().toLocaleDateString('es-ES');
-  const totalRegistros = registros.length;
-  const gastoTotal = registros.reduce((sum, r) => sum + (Number(r.precioTotal) || 0), 0);
-  const consumoTotal = registros.reduce((sum, r) => sum + (Number(r.cantidadGramos) || 0), 0);
-  const satisfaccionPromedio = totalRegistros > 0 
-    ? registros.reduce((sum, r) => sum + (Number(r.satisfaccion) || 0), 0) / totalRegistros 
-    : 0;
-
-  const datosSocial = cargarDatosSocial();
-
-  const htmlContent = `
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <title>Reporte Cannabis Control Pro - ${usuarioActual}</title>
-      <style>
-        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.4; }
-        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 10px; }
-        .summary { background: #f5f5f5; padding: 15px; margin: 20px 0; border-radius: 8px; }
-        .metrics { display: flex; justify-content: space-around; margin: 20px 0; }
-        .metric { text-align: center; }
-        .metric-value { font-size: 24px; font-weight: bold; color: #0969da; }
-        .section { margin: 25px 0; }
-        .section h2 { color: #0969da; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
-        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 11px; }
-        th { background-color: #f5f5f5; font-weight: bold; }
-        .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #666; }
-        @media print { body { margin: 0; } }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <h1>🌿 Control Cannabis Pro</h1>
-        <h2>Reporte Completo de ${usuarioActual}</h2>
-        <p>Generado el: ${fecha}</p>
-      </div>
-
-      <div class="summary">
-        <h2>📊 Resumen Ejecutivo</h2>
-        <div class="metrics">
-          <div class="metric">
-            <div class="metric-value">${totalRegistros}</div>
-            <div>Total Registros</div>
-          </div>
-          <div class="metric">
-            <div class="metric-value">$${gastoTotal.toFixed(2)}</div>
-            <div>Gasto Total</div>
-          </div>
-          <div class="metric">
-            <div class="metric-value">${consumoTotal.toFixed(1)}g</div>
-            <div>Consumo Total</div>
-          </div>
-          <div class="metric">
-            <div class="metric-value">${satisfaccionPromedio.toFixed(1)}/10</div>
-            <div>Satisfacción Promedio</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="section">
-        <h2>📋 Historial de Registros</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Tipo</th>
-              <th>Proveedor</th>
-              <th>Cantidad (g)</th>
-              <th>Precio ($)</th>
-              <th>Motivo</th>
-              <th>Método</th>
-              <th>Satisfacción</th>
-              <th>Efectos</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${registros.map(r => `
-              <tr>
-                <td>${r.fecha}</td>
-                <td>${r.tipo}</td>
-                <td>${r.proveedor}</td>
-                <td>${r.cantidadGramos}</td>
-                <td>$${r.precioTotal.toFixed(2)}</td>
-                <td>${r.motivo}</td>
-                <td>${r.metodoConsumo}</td>
-                <td>${r.satisfaccion}/10</td>
-                <td>${r.efectosSecundarios || '-'}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-
-      ${datosSocial.length > 0 ? `
-      <div class="section">
-        <h2>🤝 Desempeño Social</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Interacciones Sociales</th>
-              <th>Desempeño Laboral</th>
-              <th>Estado de Ánimo</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${datosSocial.map(d => `
-              <tr>
-                <td>${d.fecha}</td>
-                <td>${d.interaccionesSociales}</td>
-                <td>${d.desempenoLaboral}</td>
-                <td>${d.estadoAnimo}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-      ` : ''}
-
-      <div class="footer">
-        <p>© 2025 Control Cannabis Pro - Reporte generado automáticamente</p>
-        <p>Este documento contiene información confidencial de ${usuarioActual}</p>
-      </div>
-    </body>
-    </html>
-  `;
-
-  // Crear y descargar PDF
-  const printWindow = window.open('', '_blank');
-  printWindow.document.write(htmlContent);
-  printWindow.document.close();
-  
-  printWindow.onload = function() {
-    printWindow.focus();
-    printWindow.print();
+  try {
+    // Usar jsPDF para generar PDF real
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
     
-    // Mostrar mensaje de éxito después de un momento
-    setTimeout(() => {
-      if (exportMsg) {
-        exportMsg.textContent = "✅ PDF generado correctamente. Revisa tu carpeta de descargas.";
-        exportMsg.style.color = "var(--success-color)";
+    const fecha = new Date().toLocaleDateString('es-ES');
+    const totalRegistros = registros.length;
+    const gastoTotal = registros.reduce((sum, r) => sum + (Number(r.precioTotal) || 0), 0);
+    const consumoTotal = registros.reduce((sum, r) => sum + (Number(r.cantidadGramos) || 0), 0);
+    const satisfaccionPromedio = totalRegistros > 0 
+      ? registros.reduce((sum, r) => sum + (Number(r.satisfaccion) || 0), 0) / totalRegistros 
+      : 0;
+
+    const datosSocial = cargarDatosSocial();
+
+    // Configurar fuente y colores
+    doc.setFont("helvetica");
+    
+    // Header
+    doc.setFontSize(18);
+    doc.setTextColor(9, 105, 218);
+    doc.text("🌿 Control Cannabis Pro", 105, 20, { align: "center" });
+    
+    doc.setFontSize(14);
+    doc.text(`Reporte Completo de ${usuarioActual}`, 105, 30, { align: "center" });
+    
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Generado el: ${fecha}`, 105, 40, { align: "center" });
+    
+    // Línea separadora
+    doc.line(20, 45, 190, 45);
+    
+    let yPos = 55;
+    
+    // Resumen ejecutivo
+    doc.setFontSize(12);
+    doc.setTextColor(9, 105, 218);
+    doc.text("📊 Resumen Ejecutivo", 20, yPos);
+    yPos += 10;
+    
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Total Registros: ${totalRegistros}`, 20, yPos);
+    doc.text(`Gasto Total: $${gastoTotal.toFixed(2)}`, 70, yPos);
+    yPos += 7;
+    doc.text(`Consumo Total: ${consumoTotal.toFixed(1)}g`, 20, yPos);
+    doc.text(`Satisfacción Promedio: ${satisfaccionPromedio.toFixed(1)}/10`, 70, yPos);
+    yPos += 15;
+    
+    // Historial de registros
+    doc.setFontSize(12);
+    doc.setTextColor(9, 105, 218);
+    doc.text("📋 Historial de Registros", 20, yPos);
+    yPos += 10;
+    
+    // Tabla de registros (simplificada para PDF)
+    doc.setFontSize(8);
+    doc.setTextColor(0, 0, 0);
+    
+    // Headers de tabla
+    doc.text("Fecha", 20, yPos);
+    doc.text("Tipo", 45, yPos);
+    doc.text("Cantidad", 70, yPos);
+    doc.text("Precio", 95, yPos);
+    doc.text("Satisfacción", 120, yPos);
+    doc.text("Motivo", 150, yPos);
+    yPos += 5;
+    
+    // Línea bajo headers
+    doc.line(20, yPos, 190, yPos);
+    yPos += 5;
+    
+    // Registros (máximo 15 para evitar desbordamiento)
+    const registrosParaPDF = registros.slice(-15); // últimos 15 registros
+    
+    registrosParaPDF.forEach(r => {
+      if (yPos > 270) { // Nueva página si es necesario
+        doc.addPage();
+        yPos = 20;
       }
-      printWindow.close();
-    }, 1000);
-  };
+      
+      doc.text(r.fecha.slice(5), 20, yPos); // MM-DD
+      doc.text(r.tipo.slice(0, 8), 45, yPos);
+      doc.text(`${r.cantidadGramos}g`, 70, yPos);
+      doc.text(`$${r.precioTotal.toFixed(0)}`, 95, yPos);
+      doc.text(`${r.satisfaccion}/10`, 120, yPos);
+      doc.text(r.motivo.slice(0, 12), 150, yPos);
+      yPos += 7;
+    });
+    
+    // Datos sociales si existen
+    if (datosSocial.length > 0) {
+      yPos += 10;
+      if (yPos > 250) {
+        doc.addPage();
+        yPos = 20;
+      }
+      
+      doc.setFontSize(12);
+      doc.setTextColor(9, 105, 218);
+      doc.text("🤝 Desempeño Social", 20, yPos);
+      yPos += 10;
+      
+      doc.setFontSize(8);
+      doc.setTextColor(0, 0, 0);
+      
+      // Headers sociales
+      doc.text("Fecha", 20, yPos);
+      doc.text("Social", 50, yPos);
+      doc.text("Laboral", 90, yPos);
+      doc.text("Ánimo", 130, yPos);
+      yPos += 5;
+      
+      doc.line(20, yPos, 190, yPos);
+      yPos += 5;
+      
+      datosSocial.slice(-10).forEach(d => {
+        if (yPos > 270) {
+          doc.addPage();
+          yPos = 20;
+        }
+        
+        doc.text(d.fecha.slice(5), 20, yPos);
+        doc.text(d.interaccionesSociales.slice(0, 10), 50, yPos);
+        doc.text(d.desempenoLaboral.slice(0, 10), 90, yPos);
+        doc.text(d.estadoAnimo.slice(0, 10), 130, yPos);
+        yPos += 7;
+      });
+    }
+    
+    // Footer
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`© 2025 Control Cannabis Pro - ${usuarioActual}`, 105, 285, { align: "center" });
+    
+    // Descargar automáticamente
+    const nombreArchivo = `Reporte_Cannabis_${usuarioActual}_${new Date().toISOString().slice(0, 10)}.pdf`;
+    doc.save(nombreArchivo);
+    
+    // Mensaje de éxito
+    if (exportMsg) {
+      exportMsg.textContent = "✅ PDF descargado correctamente.";
+      exportMsg.style.color = "var(--success-color)";
+    }
+    
+  } catch (error) {
+    console.error("Error al generar PDF:", error);
+    if (exportMsg) {
+      exportMsg.textContent = "❌ Error al generar PDF. Intenta de nuevo.";
+      exportMsg.style.color = "var(--danger-color)";
+    }
+  }
 }
 
 /* =========================
