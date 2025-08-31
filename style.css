@@ -356,6 +356,16 @@ footer {
   width: 100%;
   font-size: 0.9rem;
   color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+footer small {
+  color: var(--accent-primary);
+  font-size: 0.8rem;
+}
+
+footer strong {
+  color: var(--accent-secondary);
 }
 
 /* ====== RESPONSIVIDAD ====== */

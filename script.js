@@ -857,7 +857,8 @@ function exportarPDF() {
     // Footer
     doc.setFontSize(8);
     doc.setTextColor(100, 100, 100);
-    doc.text(`© 2025 Control Cannabis Pro - ${usuarioActual}`, 105, 285, { align: "center" });
+    doc.text(`© 2025 Control Cannabis Pro - ${usuarioActual}`, 105, 280, { align: "center" });
+    doc.text("Desarrollado por JJ Solutions - Tecnología e Innovación", 105, 285, { align: "center" });
     
     // Descargar automáticamente
     const nombreArchivo = `Reporte_Cannabis_${usuarioActual}_${new Date().toISOString().slice(0, 10)}.pdf`;
