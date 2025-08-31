@@ -52,12 +52,9 @@ let chartDashboard = null;
 // Theme toggle
 const themeToggle = document.getElementById("themeToggle");
 
-// Export/Import
-const exportBtn = document.getElementById("exportBtn");
-const exportCSVBtn = document.getElementById("exportCSVBtn");
-const importBtn = document.getElementById("importBtn");
-const importFile = document.getElementById("importFile");
-const importMsg = document.getElementById("importMsg");
+// Export PDF
+const exportPDFBtn = document.getElementById("exportPDFBtn");
+const exportMsg = document.getElementById("exportMsg");
 
 /* =========================
    Utilidades
@@ -78,6 +75,10 @@ function activarTabs(estado) {
   });
   if (logoutBtn) {
     logoutBtn.hidden = !estado;
+  }
+  // Siempre mostrar el botón de tema
+  if (themeToggle) {
+    themeToggle.hidden = false;
   }
 }
 
@@ -706,113 +707,169 @@ function inicializarGraficoDashboard() {
 }
 
 /* =========================
-   Export/Import Functions
+   Export PDF Function
    ========================= */
-function exportarDatos() {
+function exportarPDF() {
   if (!usuarioActual || registros.length === 0) {
-    alert("No hay datos para exportar");
-    return;
-  }
-
-  const dataToExport = {
-    usuario: usuarioActual,
-    fechaExport: new Date().toISOString(),
-    registros: registros,
-    datosSocial: cargarDatosSocial(),
-    version: "2.0"
-  };
-
-  const dataStr = JSON.stringify(dataToExport, null, 2);
-  const dataBlob = new Blob([dataStr], { type: 'application/json' });
-
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(dataBlob);
-  link.download = `cannabis-control-${usuarioActual}-${new Date().toISOString().slice(0,10)}.json`;
-  link.click();
-}
-
-function exportarCSV() {
-  if (!usuarioActual || registros.length === 0) {
-    alert("No hay datos para exportar");
-    return;
-  }
-
-  const headers = [
-    "Fecha", "Tipo", "Proveedor", "Cantidad(g)", "Precio($)", 
-    "Motivo", "Método", "Satisfacción", "Efectos Secundarios"
-  ];
-
-  const csvContent = [
-    headers.join(","),
-    ...registros.map(r => [
-      r.fecha,
-      `"${r.tipo}"`,
-      `"${r.proveedor}"`,
-      r.cantidadGramos,
-      r.precioTotal,
-      `"${r.motivo}"`,
-      `"${r.metodoConsumo}"`,
-      r.satisfaccion,
-      `"${r.efectosSecundarios || ''}"`
-    ].join(","))
-  ].join("\n");
-
-  const blob = new Blob([csvContent], { type: 'text/csv' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `cannabis-control-${usuarioActual}-${new Date().toISOString().slice(0,10)}.csv`;
-  link.click();
-}
-
-function importarDatos(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      const importedData = JSON.parse(e.target.result);
-
-      if (!importedData.registros || !Array.isArray(importedData.registros)) {
-        throw new Error("Formato de archivo inválido");
-      }
-
-      // Confirmación antes de importar
-      const confirmImport = confirm(
-        `¿Confirmas importar ${importedData.registros.length} registros? Esto se agregará a tus datos existentes.`
-      );
-
-      if (confirmImport) {
-        // Agregar registros importados a los existentes
-        registros.push(...importedData.registros);
-
-        // Importar datos sociales si existen
-        if (importedData.datosSocial && Array.isArray(importedData.datosSocial)) {
-          const datosSocialActuales = cargarDatosSocial();
-          datosSocialActuales.push(...importedData.datosSocial);
-          guardarDatosSocial(datosSocialActuales);
-        }
-
-        guardarDatos();
-        actualizarUI();
-
-        if (importMsg) {
-          importMsg.textContent = `✅ ${importedData.registros.length} registros importados correctamente`;
-          importMsg.style.color = "var(--success-color)";
-        }
-      }
-    } catch (error) {
-      if (importMsg) {
-        importMsg.textContent = "❌ Error: Archivo inválido o corrupto";
-        importMsg.style.color = "var(--danger-color)";
-      }
+    if (exportMsg) {
+      exportMsg.textContent = "❌ No hay datos para exportar";
+      exportMsg.style.color = "var(--danger-color)";
     }
+    return;
+  }
 
-    // Limpiar input
-    importFile.value = "";
+  if (exportMsg) {
+    exportMsg.textContent = "📄 Generando PDF...";
+    exportMsg.style.color = "var(--accent-primary)";
+  }
+
+  // Crear contenido HTML para el PDF
+  const fecha = new Date().toLocaleDateString('es-ES');
+  const totalRegistros = registros.length;
+  const gastoTotal = registros.reduce((sum, r) => sum + (Number(r.precioTotal) || 0), 0);
+  const consumoTotal = registros.reduce((sum, r) => sum + (Number(r.cantidadGramos) || 0), 0);
+  const satisfaccionPromedio = totalRegistros > 0 
+    ? registros.reduce((sum, r) => sum + (Number(r.satisfaccion) || 0), 0) / totalRegistros 
+    : 0;
+
+  const datosSocial = cargarDatosSocial();
+
+  const htmlContent = `
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Reporte Cannabis Control Pro - ${usuarioActual}</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.4; }
+        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+        .summary { background: #f5f5f5; padding: 15px; margin: 20px 0; border-radius: 8px; }
+        .metrics { display: flex; justify-content: space-around; margin: 20px 0; }
+        .metric { text-align: center; }
+        .metric-value { font-size: 24px; font-weight: bold; color: #0969da; }
+        .section { margin: 25px 0; }
+        .section h2 { color: #0969da; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 11px; }
+        th { background-color: #f5f5f5; font-weight: bold; }
+        .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #666; }
+        @media print { body { margin: 0; } }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>🌿 Control Cannabis Pro</h1>
+        <h2>Reporte Completo de ${usuarioActual}</h2>
+        <p>Generado el: ${fecha}</p>
+      </div>
+
+      <div class="summary">
+        <h2>📊 Resumen Ejecutivo</h2>
+        <div class="metrics">
+          <div class="metric">
+            <div class="metric-value">${totalRegistros}</div>
+            <div>Total Registros</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value">$${gastoTotal.toFixed(2)}</div>
+            <div>Gasto Total</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value">${consumoTotal.toFixed(1)}g</div>
+            <div>Consumo Total</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value">${satisfaccionPromedio.toFixed(1)}/10</div>
+            <div>Satisfacción Promedio</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>📋 Historial de Registros</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Tipo</th>
+              <th>Proveedor</th>
+              <th>Cantidad (g)</th>
+              <th>Precio ($)</th>
+              <th>Motivo</th>
+              <th>Método</th>
+              <th>Satisfacción</th>
+              <th>Efectos</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${registros.map(r => `
+              <tr>
+                <td>${r.fecha}</td>
+                <td>${r.tipo}</td>
+                <td>${r.proveedor}</td>
+                <td>${r.cantidadGramos}</td>
+                <td>$${r.precioTotal.toFixed(2)}</td>
+                <td>${r.motivo}</td>
+                <td>${r.metodoConsumo}</td>
+                <td>${r.satisfaccion}/10</td>
+                <td>${r.efectosSecundarios || '-'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      ${datosSocial.length > 0 ? `
+      <div class="section">
+        <h2>🤝 Desempeño Social</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Interacciones Sociales</th>
+              <th>Desempeño Laboral</th>
+              <th>Estado de Ánimo</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${datosSocial.map(d => `
+              <tr>
+                <td>${d.fecha}</td>
+                <td>${d.interaccionesSociales}</td>
+                <td>${d.desempenoLaboral}</td>
+                <td>${d.estadoAnimo}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      ` : ''}
+
+      <div class="footer">
+        <p>© 2025 Control Cannabis Pro - Reporte generado automáticamente</p>
+        <p>Este documento contiene información confidencial de ${usuarioActual}</p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  // Crear y descargar PDF
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(htmlContent);
+  printWindow.document.close();
+  
+  printWindow.onload = function() {
+    printWindow.focus();
+    printWindow.print();
+    
+    // Mostrar mensaje de éxito después de un momento
+    setTimeout(() => {
+      if (exportMsg) {
+        exportMsg.textContent = "✅ PDF generado correctamente. Revisa tu carpeta de descargas.";
+        exportMsg.style.color = "var(--success-color)";
+      }
+      printWindow.close();
+    }, 1000);
   };
-
-  reader.readAsText(file);
 }
 
 /* =========================
@@ -1082,21 +1139,9 @@ if (themeToggle) {
   themeToggle.addEventListener("click", toggleTheme);
 }
 
-// Export/Import events
-if (exportBtn) {
-  exportBtn.addEventListener("click", exportarDatos);
-}
-
-if (exportCSVBtn) {
-  exportCSVBtn.addEventListener("click", exportarCSV);
-}
-
-if (importBtn) {
-  importBtn.addEventListener("click", () => importFile.click());
-}
-
-if (importFile) {
-  importFile.addEventListener("change", importarDatos);
+// Export PDF event
+if (exportPDFBtn) {
+  exportPDFBtn.addEventListener("click", exportarPDF);
 }
 
 /* =========================
@@ -1113,6 +1158,11 @@ window.addEventListener("load", () => {
   } else {
     activarTabs(false);
     cambiarTab("login-tab");
+  }
+
+  // Mostrar botón de tema siempre
+  if (themeToggle) {
+    themeToggle.hidden = false;
   }
 });
 
