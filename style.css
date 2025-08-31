@@ -55,6 +55,29 @@ header {
 header h1 {
   font-size: 1.5rem;
   color: var(--accent-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.beta-badge {
+  background: linear-gradient(45deg, #ff6b35, #f7931e);
+  color: white;
+  font-size: 0.6rem;
+  font-weight: bold;
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  text-shadow: none;
+  letter-spacing: 0.5px;
+  animation: pulse 2s infinite;
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
 }
 
 /* ====== PESTAÑAS ====== */
