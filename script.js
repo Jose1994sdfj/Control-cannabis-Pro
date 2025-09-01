@@ -1,1278 +1,1185 @@
-[
-  {"line": 1, "content": "/* ========================================================================="},
-  {"line": 2, "content": "   Control Consumo Cannabis Pro - script.js"},
-  {"line": 3, "content": "   - Totalmente responsivo (Chart.js con maintainAspectRatio: false)"},
-  {"line": 4, "content": "   - Corrección de IDs y tab social (graficoSocial)"},
-  {"line": 5, "content": "   - Resize automático al mostrar pestañas con gráficos"},
-  {"line": 6, "content": "   - Persistencia por usuario en localStorage"},
-  {"line": 7, "content": "   - Recomendaciones básicas"},
-  {"line": 8, "content": "   - Estructura robusta y comentada"},
-  {"line": 9, "content": "   ========================================================================= */"},
-  {"line": 10, "content": ""},
-  {"line": 11, "content": "/* =========================="},
-  {"line": 12, "content": "   Estado global y referencias"},
-  {"line": 13, "content": "   ========================= */"},
-  {"line": 14, "content": "let registros = [];"},
-  {"line": 15, "content": "let usuarioActual = null;"},
-  {"line": 16, "content": "let suscripcionActual = 'gratis'; // Estado de suscripción del usuario"},
-  {"line": 17, "content": ""},
-  {"line": 18, "content": "// Tabs y secciones"},
-  {"line": 19, "content": "const tabs = document.querySelectorAll(\".tabs button[data-tab]\");"},
-  {"line": 20, "content": "const sections = document.querySelectorAll(\"main .tab\");"},
-  {"line": 21, "content": ""},
-  {"line": 22, "content": "// Login"},
-  {"line": 23, "content": "const loginBtn = document.getElementById(\"loginBtn\");"},
-  {"line": 24, "content": "const logoutBtn = document.getElementById(\"logoutBtn\");"},
-  {"line": 25, "content": "const usernameInput = document.getElementById(\"usernameInput\");"},
-  {"line": 26, "content": "const loginMsg = document.getElementById(\"loginMsg\");"},
-  {"line": 27, "content": ""},
-  {"line": 28, "content": "// Agregar registro"},
-  {"line": 29, "content": "const addForm = document.getElementById(\"addForm\");"},
-  {"line": 30, "content": "const addMsg = document.getElementById(\"addMsg\");"},
-  {"line": 31, "content": ""},
-  {"line": 32, "content": "// Registros"},
-  {"line": 33, "content": "const recordsList = document.getElementById(\"recordsList\");"},
-  {"line": 34, "content": "const searchRecordsInput = document.getElementById(\"searchRecordsInput\");"},
-  {"line": 35, "content": ""},
-  {"line": 36, "content": "// Recomendaciones"},
-  {"line": 37, "content": "const recomendacionesBox = document.getElementById(\"recomendacionesBox\");"},
-  {"line": 38, "content": ""},
-  {"line": 39, "content": "// Desempeño social"},
-  {"line": 40, "content": "const socialForm = document.getElementById(\"socialForm\");"},
-  {"line": 41, "content": "const socialMsg = document.getElementById(\"socialMsg\");"},
-  {"line": 42, "content": "const socialRecordsList = document.getElementById(\"socialRecordsList\"); // opcional (si lo agregas en HTML)"},
-  {"line": 43, "content": ""},
-  {"line": 44, "content": "// Gráficos (Chart.js)"},
-  {"line": 45, "content": "let chartSatisfaccion = null;"},
-  {"line": 46, "content": "let chartConsumoMensual = null;"},
-  {"line": 47, "content": "let chartCostoGramo = null;"},
-  {"line": 48, "content": "let chartMetodo = null;"},
-  {"line": 49, "content": "let chartMotivo = null;"},
-  {"line": 50, "content": "let chartDesempenoSocial = null;"},
-  {"line": 51, "content": "let chartDashboard = null;"},
-  {"line": 52, "content": ""},
-  {"line": 53, "content": "// Theme toggle"},
-  {"line": 54, "content": "const themeToggle = document.getElementById(\"themeToggle\");"},
-  {"line": 55, "content": ""},
-  {"line": 56, "content": "// Export PDF"},
-  {"line": 57, "content": "const exportPDFBtn = document.getElementById(\"exportPDFBtn\");"},
-  {"line": 58, "content": "const exportMsg = document.getElementById(\"exportMsg\");"},
-  {"line": 59, "content": ""},
-  {"line": 60, "content": "/* =========================="},
-  {"line": 61, "content": "   Utilidades"},
-  {"line": 62, "content": "   ========================= */"},
-  {"line": 63, "content": ""},
-  {"line": 64, "content": "/** Devuelve el contexto 2D del canvas si existe, o null si no está presente */"},
-  {"line": 65, "content": "function ctxOf(id) {"},
-  {"line": 66, "content": "  const el = document.getElementById(id);"},
-  {"line": 67, "content": "  if (!el) return null;"},
-  {"line": 68, "content": "  const ctx = el.getContext(\"2d\");"},
-  {"line": 69, "content": "  return ctx || null;"},
-  {"line": 70, "content": "}"},
-  {"line": 71, "content": ""},
-  {"line": 72, "content": "/** Activa o desactiva tabs (excepto login) y muestra/oculta logout */"},
-  {"line": 73, "content": "function activarTabs(estado) {"},
-  {"line": 74, "content": "  tabs.forEach((btn) => {"},
-  {"line": 75, "content": "    if (btn.getAttribute(\"data-tab\") !== \"login-tab\") btn.disabled = !estado;"},
-  {"line": 76, "content": "  });"},
-  {"line": 77, "content": "  if (logoutBtn) {"},
-  {"line": 78, "content": "    logoutBtn.hidden = !estado;"},
-  {"line": 79, "content": "  }"},
-  {"line": 80, "content": "  // Siempre mostrar el botón de tema"},
-  {"line": 81, "content": "  if (themeToggle) {"},
-  {"line": 82, "content": "    themeToggle.hidden = false;"},
-  {"line": 83, "content": "  }"},
-  {"line": 84, "content": "}"},
-  {"line": 85, "content": ""},
-  {"line": 86, "content": "/** Cambia la pestaña visible y dispara resize de gráficos si corresponde */"},
-  {"line": 87, "content": "function cambiarTab(tabId) {"},
-  {"line": 88, "content": "  // Activar botón correcto"},
-  {"line": 89, "content": "  tabs.forEach((b) => b.classList.remove(\"active\"));"},
-  {"line": 90, "content": "  sections.forEach((s) => s.classList.remove(\"active\"));"},
-  {"line": 91, "content": ""},
-  {"line": 92, "content": "  const btn = Array.from(tabs).find((b) => b.getAttribute(\"data-tab\") === tabId);"},
-  {"line": 93, "content": "  if (btn) btn.classList.add(\"active\");"},
-  {"line": 94, "content": ""},
-  {"line": 95, "content": "  const sec = Array.from(sections).find((s) => s.id === tabId);"},
-  {"line": 96, "content": "  if (sec) sec.classList.add(\"active\");"},
-  {"line": 97, "content": ""},
-  {"line": 98, "content": "  // Al mostrar una sección con gráficos, forzamos resize después del reflow"},
-  {"line": 99, "content": "  if (tabId === \"stats-tab\" || tabId === \"social-tab\" || tabId === \"dashboard-tab\") {"},
-  {"line": 100, "content": "    setTimeout(resizeAllCharts, 50);"},
-  {"line": 101, "content": "  }"},
-  {"line": 102, "content": "}"},
-  {"line": 103, "content": ""},
-  {"line": 104, "content": "/** Limpia inputs de login */"},
-  {"line": 105, "content": "function limpiarLogin() {"},
-  {"line": 106, "content": "  if (usernameInput) usernameInput.value = \"\";"},
-  {"line": 107, "content": "  if (loginMsg) loginMsg.textContent = \"\";"},
-  {"line": 108, "content": "}"},
-  {"line": 109, "content": ""},
-  {"line": 110, "content": "/** Forzar resize de todos los gráficos visibles */"},
-  {"line": 111, "content": "function resizeAllCharts() {"},
-  {"line": 112, "content": "  [chartSatisfaccion, chartConsumoMensual, chartCostoGramo, chartMetodo, chartMotivo, chartDesempenoSocial, chartDashboard]"},
-  {"line": 113, "content": "    .forEach((ch) => {"},
-  {"line": 114, "content": "      try {"},
-  {"line": 115, "content": "        if (ch) ch.resize();"},
-  {"line": 116, "content": "      } catch (e) {"},
-  {"line": 117, "content": "        // no-op"},
-  {"line": 118, "content": "      }"},
-  {"line": 119, "content": "    });"},
-  {"line": 120, "content": "}"},
-  {"line": 121, "content": ""},
-  {"line": 122, "content": "/** Debounce simple */"},
-  {"line": 123, "content": "function debounce(fn, delay = 250) {"},
-  {"line": 124, "content": "  let t;"},
-  {"line": 125, "content": "  return (...args) => {"},
-  {"line": 126, "content": "    clearTimeout(t);"},
-  {"line": 127, "content": "    t = setTimeout(() => fn(...args), delay);"},
-  {"line": 128, "content": "  };"},
-  {"line": 129, "content": "}"},
-  {"line": 130, "content": ""},
-  {"line": 131, "content": "/* =========================="},
-  {"line": 132, "content": "   Persistencia (localStorage)"},
-  {"line": 133, "content": "   ========================= */"},
-  {"line": 134, "content": "function guardarDatos() {"},
-  {"line": 135, "content": "  if (!usuarioActual) return;"},
-  {"line": 136, "content": "  localStorage.setItem(\"registros_\" + usuarioActual, JSON.stringify(registros));"},
-  {"line": 137, "content": "}"},
-  {"line": 138, "content": ""},
-  {"line": 139, "content": "function cargarDatos() {"},
-  {"line": 140, "content": "  if (!usuarioActual) {"},
-  {"line": 141, "content": "    registros = [];"},
-  {"line": 142, "content": "    return;"},
-  {"line": 143, "content": "  }"},
-  {"line": 144, "content": "  const datos = localStorage.getItem(\"registros_\" + usuarioActual);"},
-  {"line": 145, "content": "  registros = datos ? JSON.parse(datos) : [];"},
-  {"line": 146, "content": "}"},
-  {"line": 147, "content": ""},
-  {"line": 148, "content": "function cargarDatosSocial() {"},
-  {"line": 149, "content": "  if (!usuarioActual) return [];"},
-  {"line": 150, "content": "  const datosSocial = localStorage.getItem(\"desempenoSocial_\" + usuarioActual);"},
-  {"line": 151, "content": "  return datosSocial ? JSON.parse(datosSocial) : [];"},
-  {"line": 152, "content": "}"},
-  {"line": 153, "content": ""},
-  {"line": 154, "content": "function guardarDatosSocial(data) {"},
-  {"line": 155, "content": "  if (!usuarioActual) return;"},
-  {"line": 156, "content": "  localStorage.setItem(\"desempenoSocial_\" + usuarioActual, JSON.stringify(data));"},
-  {"line": 157, "content": "}"},
-  {"line": 158, "content": ""},
-  {"line": 159, "content": "/* =========================="},
-  {"line": 160, "content": "   Render UI"},
-  {"line": 161, "content": "   ========================= */"},
-  {"line": 162, "content": "function actualizarUI() {"},
-  {"line": 163, "content": "  actualizarDashboard();"},
-  {"line": 164, "content": "  mostrarRegistros();"},
-  {"line": 165, "content": "  inicializarGraficos();"},
-  {"line": 166, "content": "  mostrarRecomendaciones();"},
-  {"line": 167, "content": "  mostrarRegistrosSociales();"},
-  {"line": 168, "content": "  inicializarGraficoSocial();"},
-  {"line": 169, "content": "  inicializarGraficoDashboard();"},
-  {"line": 170, "content": "}"},
-  {"line": 171, "content": ""},
-  {"line": 172, "content": "/** Actualiza las métricas del dashboard */"},
-  {"line": 173, "content": "function actualizarDashboard() {"},
-  {"line": 174, "content": "  const totalRegistrosEl = document.getElementById(\"totalRegistros\");"},
-  {"line": 175, "content": "  const gastoTotalEl = document.getElementById(\"gastoTotal\");"},
-  {"line": 176, "content": "  const consumoTotalEl = document.getElementById(\"consumoTotal\");"},
-  {"line": 177, "content": "  const satisfaccionPromedioEl = document.getElementById(\"satisfaccionPromedio\");"},
-  {"line": 178, "content": ""},
-  {"line": 179, "content": "  if (!totalRegistrosEl) return;"},
-  {"line": 180, "content": ""},
-  {"line": 181, "content": "  const totalRegistros = registros.length;"},
-  {"line": 182, "content": "  const gastoTotal = registros.reduce((sum, r) => sum + (Number(r.precioTotal) || 0), 0);"},
-  {"line": 183, "content": "  const consumoTotal = registros.reduce((sum, r) => sum + (Number(r.cantidadGramos) || 0), 0);"},
-  {"line": 184, "content": "  const satisfaccionPromedio = totalRegistros > 0"},
-  {"line": 185, "content": "    ? registros.reduce((sum, r) => sum + (Number(r.satisfaccion) || 0), 0) / totalRegistros"},
-  {"line": 186, "content": "    : 0;"},
-  {"line": 187, "content": ""},
-  {"line": 188, "content": "  totalRegistrosEl.textContent = totalRegistros.toLocaleString();"},
-  {"line": 189, "content": "  gastoTotalEl.textContent = `$${gastoTotal.toFixed(2)}`;"},
-  {"line": 190, "content": "  consumoTotalEl.textContent = `${consumoTotal.toFixed(1)}g`;"},
-  {"line": 191, "content": "  satisfaccionPromedioEl.textContent = `${satisfaccionPromedio.toFixed(1)}/10`;"},
-  {"line": 192, "content": "}"},
-  {"line": 193, "content": ""},
-  {"line": 194, "content": "/** Registros con filtro por tipo o proveedor */"},
-  {"line": 195, "content": "function mostrarRegistros() {"},
-  {"line": 196, "content": "  if (!recordsList) return;"},
-  {"line": 197, "content": ""},
-  {"line": 198, "content": "  const filtro = (searchRecordsInput?.value || \"\").trim().toLowerCase();"},
-  {"line": 199, "content": "  const filtrados = registros.filter("},
-  {"line": 200, "content": "    (r) =>"},
-  {"line": 201, "content": "      r.tipo.toLowerCase().includes(filtro) ||"},
-  {"line": 202, "content": "      r.proveedor.toLowerCase().includes(filtro)"},
-  {"line": 203, "content": "  );"},
-  {"line": 204, "content": ""},
-  {"line": 205, "content": "  if (filtrados.length === 0) {"},
-  {"line": 206, "content": "    recordsList.innerHTML = \"<p>No hay registros que coincidan.</p>\";"},
-  {"line": 207, "content": "    return;"},
-  {"line": 208, "content": "  }"},
-  {"line": 209, "content": ""},
-  {"line": 210, "content": "  recordsList.innerHTML = filtrados"},
-  {"line": 211, "content": "    .map("},
-  {"line": 212, "content": "      (r) => `"},
-  {"line": 213, "content": "      <div class=\"record-item\">"},
-  {"line": 214, "content": "        <div><strong>Fecha:</strong> ${r.fecha}</div>"},
-  {"line": 215, "content": "        <div><strong>Tipo:</strong> ${r.tipo}</div>"},
-  {"line": 216, "content": "        <div><strong>Proveedor:</strong> ${r.proveedor}</div>"},
-  {"line": 217, "content": "        <div><strong>Cantidad:</strong> ${r.cantidadGramos}g</div>"},
-  {"line": 218, "content": "        <div><strong>Precio:</strong> $${r.precioTotal.toFixed(2)}</div>"},
-  {"line": 219, "content": "        <div><strong>Motivo:</strong> ${r.motivo}</div>"},
-  {"line": 220, "content": "        <div><strong>Método:</strong> ${r.metodoConsumo}</div>"},
-  {"line": 221, "content": "        <div><strong>Satisfacción:</strong> ${r.satisfaccion}</div>"},
-  {"line": 222, "content": "        <div><strong>Efectos secundarios:</strong> ${r.efectosSecundarios || \"-\"}</div>"},
-  {"line": 223, "content": "      </div>"},
-  {"line": 224, "content": "    `"},
-  {"line": 225, "content": "    )"},
-  {"line": 226, "content": "    .join(\"\");"},
-  {"line": 227, "content": "}"},
-  {"line": 228, "content": ""},
-  {"line": 229, "content": "/** Recomendaciones en base a los datos */"},
-  {"line": 230, "content": "function mostrarRecomendaciones() {"},
-  {"line": 231, "content": "  if (!recomendacionesBox) return;"},
-  {"line": 232, "content": "  if (registros.length === 0) {"},
-  {"line": 233, "content": "    recomendacionesBox.innerHTML = \"<p>No hay datos para recomendaciones.</p>\";"},
-  {"line": 234, "content": "    return;"},
-  {"line": 235, "content": "  }"},
-  {"line": 236, "content": ""},
-  {"line": 237, "content": "  let texto = \"<ul>\";"},
-  {"line": 238, "content": "  if (registros.length > 20)"},
-  {"line": 239, "content": "    texto += \"<li>Considera hacer un descanso o disminuir frecuencia.</li>\";"},
-  {"line": 240, "content": ""},
-  {"line": 241, "content": "  const gastoPromedio ="},
-  {"line": 242, "content": "    registros.reduce((acc, r) => acc + r.precioTotal, 0) / registros.length;"},
-  {"line": 243, "content": "  if (gastoPromedio > 1000)"},
-  {"line": 244, "content": "    texto += \"<li>Revisa tu presupuesto mensual, podrías ahorrar más.</li>\";"},
-  {"line": 245, "content": ""},
-  {"line": 246, "content": "  if (registros.some((r) => (r.efectosSecundarios || \"\").toLowerCase().includes(\"ansiedad\")))"},
-  {"line": 247, "content": "    texto += \"<li>Si experimentas ansiedad, prueba variedades con mayor CBD.</li>\";"},
-  {"line": 248, "content": ""},
-  {"line": 249, "content": "  texto += \"<li>Mantén un registro constante para mejorar tu experiencia.</li></ul>\";"},
-  {"line": 250, "content": "  recomendacionesBox.innerHTML = texto;"},
-  {"line": 251, "content": "}"},
-  {"line": 252, "content": ""},
-  {"line": 253, "content": "/* =========================="},
-  {"line": 254, "content": "   Cálculos para gráficos"},
-  {"line": 255, "content": "   ========================= */"},
-  {"line": 256, "content": "function mesesOrdenados() {"},
-  {"line": 257, "content": "  // Devuelve lista única de AAAA-MM ordenada"},
-  {"line": 258, "content": "  return Array.from(new Set(registros.map((r) => r.fecha.slice(0, 7)))).sort();"},
-  {"line": 259, "content": "}"},
-  {"line": 260, "content": ""},
-  {"line": 261, "content": "function calcularConsumoMensual() {"},
-  {"line": 262, "content": "  const meses = {};"},
-  {"line": 263, "content": "  registros.forEach((r) => {"},
-  {"line": 264, "content": "    const mes = r.fecha.slice(0, 7);"},
-  {"line": 265, "content": "    if (!meses[mes]) meses[mes] = 0;"},
-  {"line": 266, "content": "    meses[mes] += Number(r.cantidadGramos) || 0;"},
-  {"line": 267, "content": "  });"},
-  {"line": 268, "content": "  return meses;"},
-  {"line": 269, "content": "}"},
-  {"line": 270, "content": ""},
-  {"line": 271, "content": "function calcularCostoPromedioPorGramo() {"},
-  {"line": 272, "content": "  const costoPorMes = {};"},
-  {"line": 273, "content": "  registros.forEach((r) => {"},
-  {"line": 274, "content": "    const mes = r.fecha.slice(0, 7);"},
-  {"line": 275, "content": "    if (!costoPorMes[mes]) costoPorMes[mes] = { totalPrecio: 0, totalGramos: 0 };"},
-  {"line": 276, "content": "    costoPorMes[mes].totalPrecio += Number(r.precioTotal) || 0;"},
-  {"line": 277, "content": "    costoPorMes[mes].totalGramos += Number(r.cantidadGramos) || 0;"},
-  {"line": 278, "content": "  });"},
-  {"line": 279, "content": ""},
-  {"line": 280, "content": "  const promedio = {};"},
-  {"line": 281, "content": "  for (const mes in costoPorMes) {"},
-  {"line": 282, "content": "    const g = costoPorMes[mes].totalGramos || 1;"},
-  {"line": 283, "content": "    promedio[mes] = costoPorMes[mes].totalPrecio / g;"},
-  {"line": 284, "content": "  }"},
-  {"line": 285, "content": "  return promedio;"},
-  {"line": 286, "content": "}"},
-  {"line": 287, "content": ""},
-  {"line": 288, "content": "function calcularFrecuenciaPorMetodo() {"},
-  {"line": 289, "content": "  const metodos = {};"},
-  {"line": 290, "content": "  registros.forEach((r) => {"},
-  {"line": 291, "content": "    const met = (r.metodoConsumo || \"\").toLowerCase();"},
-  {"line": 292, "content": "    if (!met) return;"},
-  {"line": 293, "content": "    metodos[met] = (metodos[met] || 0) + 1;"},
-  {"line": 294, "content": "  });"},
-  {"line": 295, "content": "  return metodos;"},
-  {"line": 296, "content": "}"},
-  {"line": 297, "content": ""},
-  {"line": 298, "content": "function calcularSatisfaccionPorMotivo() {"},
-  {"line": 299, "content": "  const motivos = {};"},
-  {"line": 300, "content": "  registros.forEach((r) => {"},
-  {"line": 301, "content": "    const mot = (r.motivo || \"\").toLowerCase();"},
-  {"line": 302, "content": "    if (!mot) return;"},
-  {"line": 303, "content": "    if (!motivos[mot]) motivos[mot] = { total: 0, count: 0 };"},
-  {"line": 304, "content": "    motivos[mot].total += Number(r.satisfaccion) || 0;"},
-  {"line": 305, "content": "    motivos[mot].count++;"},
-  {"line": 306, "content": "  });"},
-  {"line": 307, "content": ""},
-  {"line": 308, "content": "  const promedios = {};"},
-  {"line": 309, "content": "  for (const mot in motivos) {"},
-  {"line": 310, "content": "    promedios[mot] = motivos[mot].total / (motivos[mot].count || 1);"},
-  {"line": 311, "content": "  }"},
-  {"line": 312, "content": "  return promedios;"},
-  {"line": 313, "content": "}"},
-  {"line": 314, "content": ""},
-  {"line": 315, "content": "/* =========================="},
-  {"line": 316, "content": "   Gráficos (Stats)"},
-  {"line": 317, "content": "   ========================= */"},
-  {"line": 318, "content": "function crearGradienteVertical(ctx, color1, color2) {"},
-  {"line": 319, "content": "  const gradient = ctx.createLinearGradient(0, 0, 0, 300);"},
-  {"line": 320, "content": "  gradient.addColorStop(0, color1);"},
-  {"line": 321, "content": "  gradient.addColorStop(1, color2);"},
-  {"line": 322, "content": "  return gradient;"},
-  {"line": 323, "content": "}"},
-  {"line": 324, "content": ""},
-  {"line": 325, "content": "function inicializarGraficos() {"},
-  {"line": 326, "content": "  // Destruir si existen"},
-  {"line": 327, "content": "  if (chartSatisfaccion) chartSatisfaccion.destroy();"},
-  {"line": 328, "content": "  if (chartConsumoMensual) chartConsumoMensual.destroy();"},
-  {"line": 329, "content": "  if (chartCostoGramo) chartCostoGramo.destroy();"},
-  {"line": 330, "content": "  if (chartMetodo) chartMetodo.destroy();"},
-  {"line": 331, "content": "  if (chartMotivo) chartMotivo.destroy();"},
-  {"line": 332, "content": ""},
-  {"line": 333, "content": "  if (!registros.length) return;"},
-  {"line": 334, "content": ""},
-  {"line": 335, "content": "  // 1) Satisfacción mensual promedio"},
-  {"line": 336, "content": "  const ctxSat = ctxOf(\"graficoSatisfaccion\");"},
-  {"line": 337, "content": "  if (ctxSat) {"},
-  {"line": 338, "content": "    const gradientSat = crearGradienteVertical(ctxSat, \"#00ffea\", \"#007acc\");"},
-  {"line": 339, "content": "    const meses = mesesOrdenados();"},
-  {"line": 340, "content": "    const satPorMes = meses.map((mes) => {"},
-  {"line": 341, "content": "      const regs = registros.filter((r) => r.fecha.slice(0, 7) === mes);"},
-  {"line": 342, "content": "      const total = regs.reduce((acc, r) => acc + (Number(r.satisfaccion) || 0), 0);"},
-  {"line": 343, "content": "      return regs.length ? total / regs.length : 0;"},
-  {"line": 344, "content": "    });"},
-  {"line": 345, "content": ""},
-  {"line": 346, "content": "    chartSatisfaccion = new Chart(ctxSat, {"},
-  {"line": 347, "content": "      type: \"line\","},
-  {"line": 348, "content": "      data: {"},
-  {"line": 349, "content": "        labels: meses,"},
-  {"line": 350, "content": "        datasets: ["},
-  {"line": 351, "content": "          {"},
-  {"line": 352, "content": "            label: \"Satisfacción Promedio\","},
-  {"line": 353, "content": "            data: satPorMes,"},
-  {"line": 354, "content": "            borderColor: \"#00ffe7\","},
-  {"line": 355, "content": "            backgroundColor: gradientSat,"},
-  {"line": 356, "content": "            fill: true,"},
-  {"line": 357, "content": "            tension: 0.4,"},
-  {"line": 358, "content": "            pointRadius: 5,"},
-  {"line": 359, "content": "            pointHoverRadius: 7,"},
-  {"line": 360, "content": "            pointBackgroundColor: \"#00ffe7\","},
-  {"line": 361, "content": "            borderWidth: 2,"},
-  {"line": 362, "content": "          },"},
-  {"line": 363, "content": "        ],"},
-  {"line": 364, "content": "      },"},
-  {"line": 365, "content": "      options: {"},
-  {"line": 366, "content": "        responsive: true,"},
-  {"line": 367, "content": "        maintainAspectRatio: false, // ✅ clave para usar altura del contenedor"},
-  {"line": 368, "content": "        scales: {"},
-  {"line": 369, "content": "          y: {"},
-  {"line": 370, "content": "            min: 0,"},
-  {"line": 371, "content": "            max: 10,"},
-  {"line": 372, "content": "            grid: { borderDash: [5, 5], color: \"#00ffe7aa\" },"},
-  {"line": 373, "content": "            ticks: { color: \"#00ffe7\" },"},
-  {"line": 374, "content": "          },"},
-  {"line": 375, "content": "          x: {"},
-  {"line": 376, "content": "            grid: { display: false },"},
-  {"line": 377, "content": "            ticks: { color: \"#00ffe7\" },"},
-  {"line": 378, "content": "          },"},
-  {"line": 379, "content": "        },"},
-  {"line": 380, "content": "        plugins: {"},
-  {"line": 381, "content": "          legend: { labels: { color: \"#00ffe7\" } },"},
-  {"line": 382, "content": "          tooltip: {"},
-  {"line": 383, "content": "            backgroundColor: \"#00ffe7cc\","},
-  {"line": 384, "content": "            titleColor: \"#000\","},
-  {"line": 385, "content": "            bodyColor: \"#000\","},
-  {"line": 386, "content": "            cornerRadius: 10,"},
-  {"line": 387, "content": "            padding: 10,"},
-  {"line": 388, "content": "          },"},
-  {"line": 389, "content": "        },"},
-  {"line": 390, "content": "        animation: { duration: 900, easing: \"easeInOutQuad\" },"},
-  {"line": 391, "content": "      },"},
-  {"line": 392, "content": "    });"},
-  {"line": 393, "content": "  }"},
-  {"line": 394, "content": ""},
-  {"line": 395, "content": "  // 2) Consumo mensual (gramos)"},
-  {"line": 396, "content": "  const ctxCons = ctxOf(\"graficoConsumoMensual\");"},
-  {"line": 397, "content": "  if (ctxCons) {"},
-  {"line": 398, "content": "    const consumoMensual = calcularConsumoMensual();"},
-  {"line": 399, "content": "    const labels = Object.keys(consumoMensual).sort();"},
-  {"line": 400, "content": "    const dataVals = labels.map((m) => consumoMensual[m]);"},
-  {"line": 401, "content": "    const grad = crearGradienteVertical(ctxCons, \"#ff00ff\", \"#800080\");"},
-  {"line": 402, "content": ""},
-  {"line": 403, "content": "    chartConsumoMensual = new Chart(ctxCons, {"},
-  {"line": 404, "content": "      type: \"bar\","},
-  {"line": 405, "content": "      data: {"},
-  {"line": 406, "content": "        labels,"},
-  {"line": 407, "content": "        datasets: ["},
-  {"line": 408, "content": "          {"},
-  {"line": 409, "content": "            label: \"Consumo mensual (gramos)\","},
-  {"line": 410, "content": "            data: dataVals,"},
-  {"line": 411, "content": "            backgroundColor: grad,"},
-  {"line": 412, "content": "            borderRadius: 10,"},
-  {"line": 413, "content": "            borderSkipped: false,"},
-  {"line": 414, "content": "            hoverBackgroundColor: \"#ff6fff\","},
-  {"line": 415, "content": "            barPercentage: 0.7,"},
-  {"line": 416, "content": "          },"},
-  {"line": 417, "content": "        ],"},
-  {"line": 418, "content": "      },"},
-  {"line": 419, "content": "      options: {"},
-  {"line": 420, "content": "        responsive: true,"},
-  {"line": 421, "content": "        maintainAspectRatio: false,"},
-  {"line": 422, "content": "        scales: {"},
-  {"line": 423, "content": "          y: {"},
-  {"line": 424, "content": "            beginAtZero: true,"},
-  {"line": 425, "content": "            grid: { borderDash: [3, 3], color: \"#ff00ffaa\" },"},
-  {"line": 426, "content": "            ticks: { color: \"#ff00ff\" },"},
-  {"line": 427, "content": "          },"},
-  {"line": 428, "content": "          x: {"},
-  {"line": 429, "content": "            grid: { display: false },"},
-  {"line": 430, "content": "            ticks: { color: \"#ff00ff\" },"},
-  {"line": 431, "content": "          },"},
-  {"line": 432, "content": "        },"},
-  {"line": 433, "content": "        plugins: {"},
-  {"line": 434, "content": "          legend: { labels: { color: \"#ff00ff\" } },"},
-  {"line": 435, "content": "          tooltip: {"},
-  {"line": 436, "content": "            backgroundColor: \"#ff00ffcc\","},
-  {"line": 437, "content": "            titleColor: \"#000\","},
-  {"line": 438, "content": "            bodyColor: \"#000\","},
-  {"line": 439, "content": "            cornerRadius: 6,"},
-  {"line": 440, "content": "            padding: 8,"},
-  {"line": 441, "content": "          },"},
-  {"line": 442, "content": "        },"},
-  {"line": 443, "content": "        animation: { duration: 800, easing: \"easeOutQuart\" },"},
-  {"line": 444, "content": "      },"},
-  {"line": 445, "content": "    });"},
-  {"line": 446, "content": "  }"},
-  {"line": 447, "content": ""},
-  {"line": 448, "content": "  // 3) Costo promedio por gramo"},
-  {"line": 449, "content": "  const ctxCosto = ctxOf(\"graficoCostoGramo\");"},
-  {"line": 450, "content": "  if (ctxCosto) {"},
-  {"line": 451, "content": "    const costoProm = calcularCostoPromedioPorGramo();"},
-  {"line": 452, "content": "    const labels = Object.keys(costoProm).sort();"},
-  {"line": 453, "content": "    const dataVals = labels.map((m) => costoProm[m]);"},
-  {"line": 454, "content": "    const grad = crearGradienteVertical(ctxCosto, \"#00ff00\", \"#006600\");"},
-  {"line": 455, "content": ""},
-  {"line": 456, "content": "    chartCostoGramo = new Chart(ctxCosto, {"},
-  {"line": 457, "content": "      type: \"line\","},
-  {"line": 458, "content": "      data: {"},
-  {"line": 459, "content": "        labels,"},
-  {"line": 460, "content": "        datasets: ["},
-  {"line": 461, "content": "          {"},
-  {"line": 462, "content": "            label: \"Costo promedio por gramo ($)\","},
-  {"line": 463, "content": "            data: dataVals,"},
-  {"line": 464, "content": "            borderColor: \"#00ff00\","},
-  {"line": 465, "content": "            backgroundColor: grad,"},
-  {"line": 466, "content": "            fill: true,"},
-  {"line": 467, "content": "            tension: 0.3,"},
-  {"line": 468, "content": "            pointRadius: 5,"},
-  {"line": 469, "content": "            pointHoverRadius: 7,"},
-  {"line": 470, "content": "            borderWidth: 2,"},
-  {"line": 471, "content": "          },"},
-  {"line": 472, "content": "        ],"},
-  {"line": 473, "content": "      },"},
-  {"line": 474, "content": "      options: {"},
-  {"line": 475, "content": "        responsive: true,"},
-  {"line": 476, "content": "        maintainAspectRatio: false,"},
-  {"line": 477, "content": "        scales: {"},
-  {"line": 478, "content": "          y: {"},
-  {"line": 479, "content": "            beginAtZero: true,"},
-  {"line": 480, "content": "            grid: { color: \"#00ff0077\", borderDash: [4, 4] },"},
-  {"line": 481, "content": "            ticks: { color: \"#00ff00\" },"},
-  {"line": 482, "content": "          },"},
-  {"line": 483, "content": "          x: {"},
-  {"line": 484, "content": "            ticks: { color: \"#00ff00\" },"},
-  {"line": 485, "content": "            grid: { display: false },"},
-  {"line": 486, "content": "          },"},
-  {"line": 487, "content": "        },"},
-  {"line": 488, "content": "        plugins: {"},
-  {"line": 489, "content": "          legend: { labels: { color: \"#00ff00\" } },"},
-  {"line": 490, "content": "          tooltip: {"},
-  {"line": 491, "content": "            backgroundColor: \"#00ff0077\","},
-  {"line": 492, "content": "            titleColor: \"#000\","},
-  {"line": 493, "content": "            bodyColor: \"#000\","},
-  {"line": 494, "content": "            cornerRadius: 5,"},
-  {"line": 495, "content": "            padding: 7,"},
-  {"line": 496, "content": "          },"},
-  {"line": 497, "content": "        },"},
-  {"line": 498, "content": "        animation: { duration: 800, easing: \"easeInOutCubic\" },"},
-  {"line": 499, "content": "      },"},
-  {"line": 500, "content": "    });"},
-  {"line": 501, "content": "  }"},
-  {"line": 502, "content": ""},
-  {"line": 503, "content": "  // 4) Frecuencia por método (doughnut)"},
-  {"line": 504, "content": "  const ctxMetodo = ctxOf(\"graficoMetodo\");"},
-  {"line": 505, "content": "  if (ctxMetodo) {"},
-  {"line": 506, "content": "    const frecMetodo = calcularFrecuenciaPorMetodo();"},
-  {"line": 507, "content": "    const labels = Object.keys(frecMetodo).map((m) => m.charAt(0).toUpperCase() + m.slice(1));"},
-  {"line": 508, "content": "    const dataVals = Object.values(frecMetodo);"},
-  {"line": 509, "content": "    const coloresMetodo = [\"#ff6384\", \"#36a2eb\", \"#ffce56\", \"#4bc0c0\", \"#9966ff\", \"#ff9f40\"];"},
-  {"line": 510, "content": ""},
-  {"line": 511, "content": "    chartMetodo = new Chart(ctxMetodo, {"},
-  {"line": 512, "content": "      type: \"doughnut\","},
-  {"line": 513, "content": "      data: {"},
-  {"line": 514, "content": "        labels,"},
-  {"line": 515, "content": "        datasets: ["},
-  {"line": 516, "content": "          {"},
-  {"line": 517, "content": "            data: dataVals,"},
-  {"line": 518, "content": "            backgroundColor: coloresMetodo,"},
-  {"line": 519, "content": "            borderColor: \"#0d1117\","},
-  {"line": 520, "content": "            borderWidth: 2,"},
-  {"line": 521, "content": "          },"},
-  {"line": 522, "content": "        ],"},
-  {"line": 523, "content": "      },"},
-  {"line": 524, "content": "      options: {"},
-  {"line": 525, "content": "        responsive: true,"},
-  {"line": 526, "content": "        maintainAspectRatio: false,"},
-  {"line": 527, "content": "        plugins: {"},
-  {"line": 528, "content": "          legend: { position: \"right\", labels: { color: \"#79c0ff\" } },"},
-  {"line": 529, "content": "          tooltip: {"},
-  {"line": 530, "content": "            backgroundColor: \"#79c0ffcc\","},
-  {"line": 531, "content": "            titleColor: \"#000\","},
-  {"line": 532, "content": "            bodyColor: \"#000\","},
-  {"line": 533, "content": "            cornerRadius: 6,"},
-  {"line": 534, "content": "            padding: 6,"},
-  {"line": 535, "content": "          },"},
-  {"line": 536, "content": "        },"},
-  {"line": 537, "content": "        animation: { duration: 700 },"},
-  {"line": 538, "content": "      },"},
-  {"line": 539, "content": "    });"},
-  {"line": 540, "content": "  }"},
-  {"line": 541, "content": ""},
-  {"line": 542, "content": "  // 5) Satisfacción por motivo (bar horizontal)"},
-  {"line": 543, "content": "  const ctxMotivo = ctxOf(\"graficoMotivo\");"},
-  {"line": 544, "content": "  if (ctxMotivo) {"},
-  {"line": 545, "content": "    const satMotivo = calcularSatisfaccionPorMotivo();"},
-  {"line": 546, "content": "    const labels = Object.keys(satMotivo).map((m) => m.charAt(0).toUpperCase() + m.slice(1));"},
-  {"line": 547, "content": "    const dataVals = Object.values(satMotivo);"},
-  {"line": 548, "content": "    const grad = crearGradienteVertical(ctxMotivo, \"#ff4500\", \"#ffa500\");"},
-  {"line": 549, "content": ""},
-  {"line": 550, "content": "    chartMotivo = new Chart(ctxMotivo, {"},
-  {"line": 551, "content": "      type: \"bar\","},
-  {"line": 552, "content": "      data: {"},
-  {"line": 553, "content": "        labels,"},
-  {"line": 554, "content": "        datasets: ["},
-  {"line": 555, "content": "          {"},
-  {"line": 556, "content": "            label: \"Satisfacción promedio\","},
-  {"line": 557, "content": "            data: dataVals,"},
-  {"line": 558, "content": "            backgroundColor: grad,"},
-  {"line": 559, "content": "            borderRadius: 8,"},
-  {"line": 560, "content": "          },"},
-  {"line": 561, "content": "        ],"},
-  {"line": 562, "content": "      },"},
-  {"line": 563, "content": "      options: {"},
-  {"line": 564, "content": "        indexAxis: \"y\","},
-  {"line": 565, "content": "        responsive: true,"},
-  {"line": 566, "content": "        maintainAspectRatio: false,"},
-  {"line": 567, "content": "        scales: {"},
-  {"line": 568, "content": "          x: {"},
-  {"line": 569, "content": "            min: 0,"},
-  {"line": 570, "content": "            max: 10,"},
-  {"line": 571, "content": "            ticks: { color: \"#ffa500\" },"},
-  {"line": 572, "content": "            grid: { color: \"#ffa50055\", borderDash: [3, 3] },"},
-  {"line": 573, "content": "          },"},
-  {"line": 574, "content": "          y: {"},
-  {"line": 575, "content": "            ticks: { color: \"#ffa500\" },"},
-  {"line": 576, "content": "            grid: { display: false },"},
-  {"line": 577, "content": "          },"},
-  {"line": 578, "content": "        },"},
-  {"line": 579, "content": "        plugins: {"},
-  {"line": 580, "content": "          legend: { labels: { color: \"#ffa500\" } },"},
-  {"line": 581, "content": "          tooltip: {"},
-  {"line": 582, "content": "            backgroundColor: \"#ffa500cc\","},
-  {"line": 583, "content": "            titleColor: \"#000\","},
-  {"line": 584, "content": "            bodyColor: \"#000\","},
-  {"line": 585, "content": "            cornerRadius: 8,"},
-  {"line": 586, "content": "            padding: 8,"},
-  {"line": 587, "content": "          },"},
-  {"line": 588, "content": "        },"},
-  {"line": 589, "content": "        animation: { duration: 800, easing: \"easeOutQuart\" },"},
-  {"line": 590, "content": "      },"},
-  {"line": 591, "content": "    });"},
-  {"line": 592, "content": "  }"},
-  {"line": 593, "content": "}"},
-  {"line": 594, "content": ""},
-  {"line": 595, "content": "/** Gráfico resumen para dashboard - últimos 30 días */"},
-  {"line": 596, "content": "function inicializarGraficoDashboard() {"},
-  {"line": 597, "content": "  if (chartDashboard) {"},
-  {"line": 598, "content": "    chartDashboard.destroy();"},
-  {"line": 599, "content": "    chartDashboard = null;"},
-  {"line": 600, "content": "  }"},
-  {"line": 601, "content": ""},
-  {"line": 602, "content": "  if (!registros.length) return;"},
-  {"line": 603, "content": ""},
-  {"line": 604, "content": "  const ctx = ctxOf(\"graficoDashboard\");"},
-  {"line": 605, "content": "  if (!ctx) return;"},
-  {"line": 606, "content": ""},
-  {"line": 607, "content": "  // Filtrar últimos 30 días"},
-  {"line": 608, "content": "  const hace30Dias = new Date();"},
-  {"line": 609, "content": "  hace30Dias.setDate(hace30Dias.getDate() - 30);"},
-  {"line": 610, "content": ""},
-  {"line": 611, "content": "  const registrosRecientes = registros.filter(r => {"},
-  {"line": 612, "content": "    const fechaRegistro = new Date(r.fecha);"},
-  {"line": 613, "content": "    return fechaRegistro >= hace30Dias;"},
-  {"line": 614, "content": "  });"},
-  {"line": 615, "content": ""},
-  {"line": 616, "content": "  if (registrosRecientes.length === 0) return;"},
-  {"line": 617, "content": ""},
-  {"line": 618, "content": "  // Agrupar por día"},
-  {"line": 619, "content": "  const datosPorDia = {};"},
-  {"line": 620, "content": "  registrosRecientes.forEach(r => {"},
-  {"line": 621, "content": "    const dia = r.fecha;"},
-  {"line": 622, "content": "    if (!datosPorDia[dia]) {"},
-  {"line": 623, "content": "      datosPorDia[dia] = { consumo: 0, gasto: 0, satisfaccion: 0, count: 0 };"},
-  {"line": 624, "content": "    }"},
-  {"line": 625, "content": "    datosPorDia[dia].consumo += Number(r.cantidadGramos) || 0;"},
-  {"line": 626, "content": "    datosPorDia[dia].gasto += Number(r.precioTotal) || 0;"},
-  {"line": 627, "content": "    datosPorDia[dia].satisfaccion += Number(r.satisfaccion) || 0;"},
-  {"line": 628, "content": "    datosPorDia[dia].count += 1;"},
-  {"line": 629, "content": "  });"},
-  {"line": 630, "content": ""},
-  {"line": 631, "content": "  const dias = Object.keys(datosPorDia).sort();"},
-  {"line": 632, "content": "  const consumoDiario = dias.map(d => datosPorDia[d].consumo);"},
-  {"line": 633, "content": "  const satisfaccionDiaria = dias.map(d => datosPorDia[d].satisfaccion / datosPorDia[d].count);"},
-  {"line": 634, "content": ""},
-  {"line": 635, "content": "  const gradient1 = crearGradienteVertical(ctx, \"#00ffe7\", \"#007acc\");"},
-  {"line": 636, "content": "  const gradient2 = crearGradienteVertical(ctx, \"#ff6384\", \"#ff1744\");"},
-  {"line": 637, "content": ""},
-  {"line": 638, "content": "  chartDashboard = new Chart(ctx, {"},
-  {"line": 639, "content": "    type: \"line\","},
-  {"line": 640, "content": "    data: {"},
-  {"line": 641, "content": "      labels: dias.map(d => new Date(d).toLocaleDateString()),"},
-  {"line": 642, "content": "      datasets: ["},
-  {"line": 643, "content": "        {"},
-  {"line": 644, "content": "          label: \"Consumo (g)\","},
-  {"line": 645, "content": "          data: consumoDiario,"},
-  {"line": 646, "content": "          borderColor: \"#00ffe7\","},
-  {"line": 647, "content": "          backgroundColor: gradient1,"},
-  {"line": 648, "content": "          fill: false,"},
-  {"line": 649, "content": "          tension: 0.4,"},
-  {"line": 650, "content": "          yAxisID: \"y\","},
-  {"line": 651, "content": "        },"},
-  {"line": 652, "content": "        {"},
-  {"line": 653, "content": "          label: \"Satisfacción\","},
-  {"line": 654, "content": "          data: satisfaccionDiaria,"},
-  {"line": 655, "content": "          borderColor: \"#ff6384\","},
-  {"line": 656, "content": "          backgroundColor: gradient2,"},
-  {"line": 657, "content": "          fill: false,"},
-  {"line": 658, "content": "          tension: 0.4,"},
-  {"line": 659, "content": "          yAxisID: \"y1\","},
-  {"line": 660, "content": "        }"},
-  {"line": 661, "content": "      ]"},
-  {"line": 662, "content": "    },"},
-  {"line": 663, "content": "    options: {"},
-  {"line": 664, "content": "      responsive: true,"},
-  {"line": 665, "content": "      maintainAspectRatio: false,"},
-  {"line": 666, "content": "      interaction: {"},
-  {"line": 667, "content": "        mode: 'index\',"},
-  {"line": 668, "content": "        intersect: false,"},
-  {"line": 669, "content": "      },"},
-  {"line": 670, "content": "      scales: {"},
-  {"line": 671, "content": "        x: {"},
-  {"line": 672, "content": "          ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-primary') },"},
-  {"line": 673, "content": "          grid: { display: false },"},
-  {"line": 674, "content": "        },"},
-  {"line": 675, "content": "        y: {"},
-  {"line": 676, "content": "          type: 'linear\',"},
-  {"line": 677, "content": "          display: true,"},
-  {"line": 678, "content": "          position: 'left\',"},
-  {"line": 679, "content": "          ticks: { color: \"#00ffe7\" },"},
-  {"line": 680, "content": "          grid: { color: \"#00ffe755\" },"},
-  {"line": 681, "content": "        },"},
-  {"line": 682, "content": "        y1: {"},
-  {"line": 683, "content": "          type: 'linear\',"},
-  {"line": 684, "content": "          display: true,"},
-  {"line": 685, "content": "          position: 'right\',"},
-  {"line": 686, "content": "          min: 0,"},
-  {"line": 687, "content": "          max: 10,"},
-  {"line": 688, "content": "          ticks: { color: \"#ff6384\" },"},
-  {"line": 689, "content": "          grid: { drawOnChartArea: false },"},
-  {"line": 690, "content": "        },"},
-  {"line": 691, "content": "      },"},
-  {"line": 692, "content": "      plugins: {"},
-  {"line": 693, "content": "        legend: {"},
-  {"line": 694, "content": "          labels: {"},
-  {"line": 695, "content": "            color: getComputedStyle(document.documentElement).getPropertyValue('--text-primary')"},
-  {"line": 696, "content": "          }"},
-  {"line": 697, "content": "        },"},
-  {"line": 698, "content": "        tooltip: {"},
-  {"line": 699, "content": "          backgroundColor: \"rgba(13, 17, 23, 0.9)\","},
-  {"line": 700, "content": "          titleColor: \"#00ffe7\","},
-  {"line": 701, "content": "          bodyColor: \"#c9d1d9\","},
-  {"line": 702, "content": "          cornerRadius: 8,"},
-  {"line": 703, "content": "        },"},
-  {"line": 704, "content": "      },"},
-  {"line": 705, "content": "      animation: { duration: 800 },"},
-  {"line": 706, "content": "    });"},
-  {"line": 707, "content": "}"},
-  {"line": 708, "content": ""},
-  {"line": 709, "content": "/* =========================="},
-  {"line": 710, "content": "   Export PDF Function"},
-  {"line": 711, "content": "   ========================= */"},
-  {"line": 712, "content": "function exportarPDF() {"},
-  {"line": 713, "content": "  if (!usuarioActual || registros.length === 0) {"},
-  {"line": 714, "content": "    if (exportMsg) {"},
-  {"line": 715, "content": "      exportMsg.textContent = \"❌ No hay datos para exportar\";"},
-  {"line": 716, "content": "      exportMsg.style.color = \"var(--danger-color)\";"},
-  {"line": 717, "content": "    }"},
-  {"line": 718, "content": "    return;"},
-  {"line": 719, "content": "  }"},
-  {"line": 720, "content": ""},
-  {"line": 721, "content": "  if (exportMsg) {"},
-  {"line": 722, "content": "    exportMsg.textContent = \"📄 Generando PDF...\";"},
-  {"line": 723, "content": "    exportMsg.style.color = \"var(--accent-primary)\";"},
-  {"line": 724, "content": "  }"},
-  {"line": 725, "content": ""},
-  {"line": 726, "content": "  try {"},
-  {"line": 727, "content": "    // Usar jsPDF para generar PDF real"},
-  {"line": 728, "content": "    const { jsPDF } = window.jspdf;"},
-  {"line": 729, "content": "    const doc = new jsPDF();"},
-  {"line": 730, "content": ""},
-  {"line": 731, "content": "    const fecha = new Date().toLocaleDateString('es-ES');"},
-  {"line": 732, "content": "    const totalRegistros = registros.length;"},
-  {"line": 733, "content": "    const gastoTotal = registros.reduce((sum, r) => sum + (Number(r.precioTotal) || 0), 0);"},
-  {"line": 734, "content": "    const consumoTotal = registros.reduce((sum, r) => sum + (Number(r.cantidadGramos) || 0), 0);"},
-  {"line": 735, "content": "    const satisfaccionPromedio = totalRegistros > 0"},
-  {"line": 736, "content": "      ? registros.reduce((sum, r) => sum + (Number(r.satisfaccion) || 0), 0) / totalRegistros"},
-  {"line": 737, "content": "      : 0;"},
-  {"line": 738, "content": ""},
-  {"line": 739, "content": "    const datosSocial = cargarDatosSocial();"},
-  {"line": 740, "content": ""},
-  {"line": 741, "content": "    // Configurar fuente y colores"},
-  {"line": 742, "content": "    doc.setFont(\"helvetica\");"},
-  {"line": 743, "content": ""},
-  {"line": 744, "content": "    // Header"},
-  {"line": 745, "content": "    doc.setFontSize(18);"},
-  {"line": 746, "content": "    doc.setTextColor(9, 105, 218);"},
-  {"line": 747, "content": "    doc.text(\"🌿 Control Cannabis Pro\", 105, 20, { align: \"center\" });"},
-  {"line": 748, "content": ""},
-  {"line": 749, "content": "    doc.setFontSize(14);"},
-  {"line": 750, "content": "    doc.text(`Reporte Completo de ${usuarioActual}`, 105, 30, { align: \"center\" });"},
-  {"line": 751, "content": ""},
-  {"line": 752, "content": "    doc.setFontSize(10);"},
-  {"line": 753, "content": "    doc.setTextColor(0, 0, 0);"},
-  {"line": 754, "content": "    doc.text(`Generado el: ${fecha}`, 105, 40, { align: \"center\" });"},
-  {"line": 755, "content": ""},
-  {"line": 756, "content": "    // Línea separadora"},
-  {"line": 757, "content": "    doc.line(20, 45, 190, 45);"},
-  {"line": 758, "content": ""},
-  {"line": 759, "content": "    let yPos = 55;"},
-  {"line": 760, "content": ""},
-  {"line": 761, "content": "    // Resumen ejecutivo"},
-  {"line": 762, "content": "    doc.setFontSize(12);"},
-  {"line": 763, "content": "    doc.setTextColor(9, 105, 218);"},
-  {"line": 764, "content": "    doc.text(\"📊 Resumen Ejecutivo\", 20, yPos);"},
-  {"line": 765, "content": "    yPos += 10;"},
-  {"line": 766, "content": ""},
-  {"line": 767, "content": "    doc.setFontSize(10);"},
-  {"line": 768, "content": "    doc.setTextColor(0, 0, 0);"},
-  {"line": 769, "content": "    doc.text(`Total Registros: ${totalRegistros}`, 20, yPos);"},
-  {"line": 770, "content": "    doc.text(`Gasto Total: $${gastoTotal.toFixed(2)}`, 70, yPos);"},
-  {"line": 771, "content": "    yPos += 7;"},
-  {"line": 772, "content": "    doc.text(`Consumo Total: ${consumoTotal.toFixed(1)}g`, 20, yPos);"},
-  {"line": 773, "content": "    doc.text(`Satisfacción Promedio: ${satisfaccionPromedio.toFixed(1)}/10`, 70, yPos);"},
-  {"line": 774, "content": "    yPos += 15;"},
-  {"line": 775, "content": ""},
-  {"line": 776, "content": "    // Historial de registros"},
-  {"line": 777, "content": "    doc.setFontSize(12);"},
-  {"line": 778, "content": "    doc.setTextColor(9, 105, 218);"},
-  {"line": 779, "content": "    doc.text(\"📋 Historial de Registros\", 20, yPos);"},
-  {"line": 780, "content": "    yPos += 10;"},
-  {"line": 781, "content": ""},
-  {"line": 782, "content": "    // Tabla de registros (simplificada para PDF)"},
-  {"line": 783, "content": "    doc.setFontSize(8);"},
-  {"line": 784, "content": "    doc.setTextColor(0, 0, 0);"},
-  {"line": 785, "content": ""},
-  {"line": 786, "content": "    // Headers de tabla"},
-  {"line": 787, "content": "    doc.text(\"Fecha\", 20, yPos);"},
-  {"line": 788, "content": "    doc.text(\"Tipo\", 45, yPos);"},
-  {"line": 789, "content": "    doc.text(\"Cantidad\", 70, yPos);"},
-  {"line": 790, "content": "    doc.text(\"Precio\", 95, yPos);"},
-  {"line": 791, "content": "    doc.text(\"Satisfacción\", 120, yPos);"},
-  {"line": 792, "content": "    doc.text(\"Motivo\", 150, yPos);"},
-  {"line": 793, "content": "    yPos += 5;"},
-  {"line": 794, "content": ""},
-  {"line": 795, "content": "    // Línea bajo headers"},
-  {"line": 796, "content": "    doc.line(20, yPos, 190, yPos);"},
-  {"line": 797, "content": "    yPos += 5;"},
-  {"line": 798, "content": ""},
-  {"line": 799, "content": "    // Registros (máximo 15 para evitar desbordamiento)"},
-  {"line": 800, "content": "    const registrosParaPDF = registros.slice(-15); // últimos 15 registros"},
-  {"line": 801, "content": ""},
-  {"line": 802, "content": "    registrosParaPDF.forEach(r => {"},
-  {"line": 803, "content": "      if (yPos > 270) { // Nueva página si es necesario"},
-  {"line": 804, "content": "        doc.addPage();"},
-  {"line": 805, "content": "        yPos = 20;"},
-  {"line": 806, "content": "      }"},
-  {"line": 807, "content": ""},
-  {"line": 808, "content": "      doc.text(r.fecha.slice(5), 20, yPos); // MM-DD"},
-  {"line": 809, "content": "      doc.text(r.tipo.slice(0, 8), 45, yPos);"},
-  {"line": 810, "content": "      doc.text(`${r.cantidadGramos}g`, 70, yPos);"},
-  {"line": 811, "content": "      doc.text(`$${r.precioTotal.toFixed(0)}`, 95, yPos);"},
-  {"line": 812, "content": "      doc.text(`${r.satisfaccion}/10`, 120, yPos);"},
-  {"line": 813, "content": "      doc.text(r.motivo.slice(0, 12), 150, yPos);"},
-  {"line": 814, "content": "      yPos += 7;"},
-  {"line": 815, "content": "    });"},
-  {"line": 816, "content": ""},
-  {"line": 817, "content": "    // Datos sociales si existen"},
-  {"line": 818, "content": "    if (datosSocial.length > 0) {"},
-  {"line": 819, "content": "      yPos += 10;"},
-  {"line": 820, "content": "      if (yPos > 250) {"},
-  {"line": 821, "content": "        doc.addPage();"},
-  {"line": 822, "content": "        yPos = 20;"},
-  {"line": 823, "content": "      }"},
-  {"line": 824, "content": ""},
-  {"line": 825, "content": "      doc.setFontSize(12);"},
-  {"line": 826, "content": "      doc.setTextColor(9, 105, 218);"},
-  {"line": 827, "content": "      doc.text(\"🤝 Desempeño Social\", 20, yPos);"},
-  {"line": 828, "content": "      yPos += 10;"},
-  {"line": 829, "content": ""},
-  {"line": 830, "content": "      doc.setFontSize(8);"},
-  {"line": 831, "content": "      doc.setTextColor(0, 0, 0);"},
-  {"line": 832, "content": ""},
-  {"line": 833, "content": "      // Headers sociales"},
-  {"line": 834, "content": "      doc.text(\"Fecha\", 20, yPos);"},
-  {"line": 835, "content": "      doc.text(\"Social\", 50, yPos);"},
-  {"line": 836, "content": "      doc.text(\"Laboral\", 90, yPos);"},
-  {"line": 837, "content": "      doc.text(\"Ánimo\", 130, yPos);"},
-  {"line": 838, "content": "      yPos += 5;"},
-  {"line": 839, "content": ""},
-  {"line": 840, "content": "      doc.line(20, yPos, 190, yPos);"},
-  {"line": 841, "content": "      yPos += 5;"},
-  {"line": 842, "content": ""},
-  {"line": 843, "content": "      datosSocial.slice(-10).forEach(d => {"},
-  {"line": 844, "content": "        if (yPos > 270) {"},
-  {"line": 845, "content": "          doc.addPage();"},
-  {"line": 846, "content": "          yPos = 20;"},
-  {"line": 847, "content": "        }"},
-  {"line": 848, "content": ""},
-  {"line": 849, "content": "        doc.text(d.fecha.slice(5), 20, yPos);"},
-  {"line": 850, "content": "        doc.text(d.interaccionesSociales.slice(0, 10), 50, yPos);"},
-  {"line": 851, "content": "        doc.text(d.desempenoLaboral.slice(0, 10), 90, yPos);"},
-  {"line": 852, "content": "        doc.text(d.estadoAnimo.slice(0, 10), 130, yPos);"},
-  {"line": 853, "content": "        yPos += 7;"},
-  {"line": 854, "content": "      });"},
-  {"line": 855, "content": "    }"},
-  {"line": 856, "content": ""},
-  {"line": 857, "content": "    // Footer"},
-  {"line": 858, "content": "    doc.setFontSize(8);"},
-  {"line": 859, "content": "    doc.setTextColor(100, 100, 100);"},
-  {"line": 860, "content": "    doc.text(`© 2025 Control Cannabis Pro - ${usuarioActual}`, 105, 280, { align: \"center\" });"},
-  {"line": 861, "content": "    doc.text(\"Desarrollado por JJ Solutions - Tecnología e Innovación\", 105, 285, { align: \"center\" });"},
-  {"line": 862, "content": ""},
-  {"line": 863, "content": "    // Descargar automáticamente"},
-  {"line": 864, "content": "    const nombreArchivo = `Reporte_Cannabis_${usuarioActual}_${new Date().toISOString().slice(0, 10)}.pdf`;"},
-  {"line": 865, "content": "    doc.save(nombreArchivo);"},
-  {"line": 866, "content": ""},
-  {"line": 867, "content": "    // Mensaje de éxito"},
-  {"line": 868, "content": "    if (exportMsg) {"},
-  {"line": 869, "content": "      exportMsg.textContent = \"✅ PDF descargado correctamente.\";"},
-  {"line": 870, "content": "      exportMsg.style.color = \"var(--success-color)\";"},
-  {"line": 871, "content": "    }"},
-  {"line": 872, "content": ""},
-  {"line": 873, "content": "  } catch (error) {"},
-  {"line": 874, "content": "    console.error(\"Error al generar PDF:\", error);"},
-  {"line": 875, "content": "    if (exportMsg) {"},
-  {"line": 876, "content": "      exportMsg.textContent = \"❌ Error al generar PDF. Intenta de nuevo.\";"},
-  {"line": 877, "content": "      exportMsg.style.color = \"var(--danger-color)\";"},
-  {"line": 878, "content": "    }"},
-  {"line": 879, "content": "  }"},
-  {"line": 880, "content": "}"},
-  {"line": 881, "content": ""},
-  {"line": 882, "content": "/* =========================="},
-  {"line": 883, "content": "   Theme Toggle"},
-  {"line": 884, "content": "   ========================= */"},
-  {"line": 885, "content": "function toggleTheme() {"},
-  {"line": 886, "content": "  const body = document.body;"},
-  {"line": 887, "content": "  const isLight = body.classList.contains(\"light-theme\");"},
-  {"line": 888, "content": ""},
-  {"line": 889, "content": "  if (isLight) {"},
-  {"line": 890, "content": "    body.classList.remove(\"light-theme\");"},
-  {"line": 891, "content": "    themeToggle.textContent = \"🌙\";"},
-  {"line": 892, "content": "    localStorage.setItem(\"theme\", \"dark\");"},
-  {"line": 893, "content": "  } else {"},
-  {"line": 894, "content": "    body.classList.add(\"light-theme\");"},
-  {"line": 895, "content": "    themeToggle.textContent = \"☀️\";"},
-  {"line": 896, "content": "    localStorage.setItem(\"theme\", \"light\");"},
-  {"line": 897, "content": "  }"},
-  {"line": 898, "content": ""},
-  {"line": 899, "content": "  // Actualizar gráficos para el nuevo tema"},
-  {"line": 900, "content": "  setTimeout(() => {"},
-  {"line": 901, "content": "    resizeAllCharts();"},
-  {"line": 902, "content": "    inicializarGraficos();"},
-  {"line": 903, "content": "    inicializarGraficoSocial();"},
-  {"line": 904, "content": "    inicializarGraficoDashboard();"},
-  {"line": 905, "content": "  }, 100);"},
-  {"line": 906, "content": "}"},
-  {"line": 907, "content": ""},
-  {"line": 908, "content": "function aplicarTemaGuardado() {"},
-  {"line": 909, "content": "  const savedTheme = localStorage.getItem(\"theme\");"},
-  {"line": 910, "content": "  if (savedTheme === \"light\") {"},
-  {"line": 911, "content": "    document.body.classList.add(\"light-theme\");"},
-  {"line": 912, "content": "    if (themeToggle) themeToggle.textContent = \"☀️\";"},
-  {"line": 913, "content": "  } else {"},
-  {"line": 914, "content": "    if (themeToggle) themeToggle.textContent = \"🌙\";"},
-  {"line": 915, "content": "  }"},
-  {"line": 916, "content": "}"},
-  {"line": 917, "content": ""},
-  {"line": 918, "content": "/* =========================="},
-  {"line": 919, "content": "   Desempeño Social"},
-  {"line": 920, "content": "   ========================= */"},
-  {"line": 921, "content": "function mostrarRegistrosSociales() {"},
-  {"line": 922, "content": "  if (!socialRecordsList) return; // si no existe en HTML, omitir"},
-  {"line": 923, "content": "  const datosSocial = cargarDatosSocial();"},
-  {"line": 924, "content": ""},
-  {"line": 925, "content": "  if (datosSocial.length === 0) {"},
-  {"line": 926, "content": "    socialRecordsList.innerHTML = \"<p>No hay registros de desempeño social.</p>\";"},
-  {"line": 927, "content": "    return;"},
-  {"line": 928, "content": "  }"},
-  {"line": 929, "content": ""},
-  {"line": 930, "content": "  socialRecordsList.innerHTML = datosSocial"},
-  {"line": 931, "content": "    .map("},
-  {"line": 932, "content": "      (d) => `"},
-  {"line": 933, "content": "        <div class=\"record-item\">"},
-  {"line": 934, "content": "          <div><strong>Fecha:</strong> ${d.fecha}</div>"},
-  {"line": 935, "content": "          <div><strong>Interacciones Sociales:</strong> ${d.interaccionesSociales}</div>"},
-  {"line": 936, "content": "          <div><strong>Desempeño Laboral:</strong> ${d.desempenoLaboral}</div>"},
-  {"line": 937, "content": "          <div><strong>Estado de Ánimo:</strong> ${d.estadoAnimo}</div>"},
-  {"line": 938, "content": "        </div>"},
-  {"line": 939, "content": "      `"},
-  {"line": 940, "content": "    )"},
-  {"line": 941, "content": "    .join(\"\");"},
-  {"line": 942, "content": "}"},
-  {"line": 943, "content": ""},
-  {"line": 944, "content": "function valorNumerico(valor) {"},
-  {"line": 945, "content": "  if (!valor) return 5;"},
-  {"line": 946, "content": "  valor = (valor + \"\").toLowerCase().trim();"},
-  {"line": 947, "content": "  if ([\"baja\", \"bajo\", \"poca\", \"poco\", \"mala\", \"malo\", \"negativo\"].includes(valor)) return 3;"},
-  {"line": 948, "content": "  if ([\"media\", \"medio\", \"regular\", \"moderada\", \"moderado\", \"neutral\"].includes(valor)) return 6;"},
-  {"line": 949, "content": "  if ([\"alta\", \"alto\", \"buena\", \"bueno\", \"excelente\", \"muy buena\", \"positivo\"].includes(valor)) return 9;"},
-  {"line": 950, "content": "  const n = parseInt(valor, 10);"},
-  {"line": 951, "content": "  if (!isNaN(n)) return Math.max(0, Math.min(10, n));"},
-  {"line": 952, "content": "  return 5;"},
-  {"line": 953, "content": "}"},
-  {"line": 954, "content": ""},
-  {"line": 955, "content": "function inicializarGraficoSocial() {"},
-  {"line": 956, "content": "  if (chartDesempenoSocial) {"},
-  {"line": 957, "content": "    chartDesempenoSocial.destroy();"},
-  {"line": 958, "content": "    chartDesempenoSocial = null;"},
-  {"line": 959, "content": "  }"},
-  {"line": 960, "content": ""},
-  {"line": 961, "content": "  const datosSocial = cargarDatosSocial();"},
-  {"line": 962, "content": "  if (!datosSocial.length) return;"},
-  {"line": 963, "content": ""},
-  {"line": 964, "content": "  const total = datosSocial.length;"},
-  {"line": 965, "content": "  let sumaInteracciones = 0;"},
-  {"line": 966, "content": "  let sumaDesempeno = 0;"},
-  {"line": 967, "content": "  let sumaEstado = 0;"},
-  {"line": 968, "content": ""},
-  {"line": 969, "content": "  datosSocial.forEach((d) => {"},
-  {"line": 970, "content": "    sumaInteracciones += valorNumerico(d.interaccionesSociales);"},
-  {"line": 971, "content": "    sumaDesempeno += valorNumerico(d.desempenoLaboral);"},
-  {"line": 972, "content": "    sumaEstado += valorNumerico(d.estadoAnimo);"},
-  {"line": 973, "content": "  });"},
-  {"line": 974, "content": ""},
-  {"line": 975, "content": "  const promedioInteracciones = +(sumaInteracciones / total).toFixed(2);"},
-  {"line": 976, "content": "  const promedioDesempeno = +(sumaDesempeno / total).toFixed(2);"},
-  {"line": 977, "content": "  const promedioEstado = +(sumaEstado / total).toFixed(2);"},
-  {"line": 978, "content": ""},
-  {"line": 979, "content": "  const ctx = ctxOf(\"graficoSocial\"); // ← coincide con tu HTML"},
-  {"line": 980, "content": "  if (!ctx) return;"},
-  {"line": 981, "content": ""},
-  {"line": 982, "content": "  chartDesempenoSocial = new Chart(ctx, {"},
-  {"line": 983, "content": "    type: \"bar\","},
-  {"line": 984, "content": "    data: {"},
-  {"line": 985, "content": "      labels: [\"Interacciones Sociales\", \"Desempeño Laboral\", \"Estado de Ánimo\"],"},
-  {"line": 986, "content": "      datasets: ["},
-  {"line": 987, "content": "        {"},
-  {"line": 988, "content": "          label: \"Promedio\","},
-  {"line": 989, "content": "          data: [promedioInteracciones, promedioDesempeno, promedioEstado],"},
-  {"line": 990, "content": "          backgroundColor: [\"#79c0ff\", \"#238636\", \"#58a6ff\"],"},
-  {"line": 991, "content": "          borderRadius: 8,"},
-  {"line": 992, "content": "          borderWidth: 1,"},
-  {"line": 993, "content": "          borderColor: \"#79c0ff\","},
-  {"line": 994, "content": "        },"},
-  {"line": 995, "content": "      ],"},
-  {"line": 996, "content": "    },"},
-  {"line": 997, "content": "    options: {"},
-  {"line": 998, "content": "      responsive: true,"},
-  {"line": 999, "content": "      maintainAspectRatio: false, // ✅ adapta al contenedor"},
-  {"line": 1000, "content": "      scales: {"},
-  {"line": 1001, "content": "        y: {"},
-  {"line": 1002, "content": "          min: 0,"},
-  {"line": 1003, "content": "          max: 10,"},
-  {"line": 1004, "content": "          ticks: { color: \"#79c0ff\", stepSize: 1 },"},
-  {"line": 1005, "content": "          grid: { color: \"#79c0ff44\", borderDash: [5, 5] },"},
-  {"line": 1006, "content": "        },"},
-  {"line": 1007, "content": "        x: {"},
-  {"line": 1008, "content": "          ticks: { color: \"#79c0ff\" },"},
-  {"line": 1009, "content": "          grid: { display: false },"},
-  {"line": 1010, "content": "        },"},
-  {"line": 1011, "content": "      },"},
-  {"line": 1012, "content": "      plugins: {"},
-  {"line": 1013, "content": "        legend: { labels: { color: \"#79c0ff\" } },"},
-  {"line": 1014, "content": "        tooltip: {"},
-  {"line": 1015, "content": "          backgroundColor: \"#79c0ffcc\","},
-  {"line": 1016, "content": "          titleColor: \"#000\","},
-  {"line": 1017, "content": "          bodyColor: \"#000\","},
-  {"line": 1018, "content": "          cornerRadius: 6,"},
-  {"line": 1019, "content": "          padding: 6,"},
-  {"line": 1020, "content": "        },"},
-  {"line": 1021, "content": "      },"},
-  {"line": 1022, "content": "      animation: { duration: 800, easing: \"easeInOutQuad\" },"},
-  {"line": 1023, "content": "    });"},
-  {"line": 1024, "content": "}"},
-  {"line": 1025, "content": ""},
-  {"line": 1026, "content": "/* =========================="},
-  {"line": 1027, "content": "   Eventos"},
-  {"line": 1028, "content": "   ========================= */"},
-  {"line": 1029, "content": "// Tabs navegación"},
-  {"line": 1030, "content": "tabs.forEach((btn) => {"},
-  {"line": 1031, "content": "  btn.addEventListener(\"click\", () => {"},
-  {"line": 1032, "content": "    if (btn.disabled) return;"},
-  {"line": 1033, "content": "    const tabId = btn.getAttribute(\"data-tab\");"},
-  {"line": 1034, "content": "    cambiarTab(tabId);"},
-  {"line": 1035, "content": "  });"},
-  {"line": 1036, "content": "});"},
-  {"line": 1037, "content": ""},
-  {"line": 1038, "content": "// Login"},
-  {"line": 1039, "content": "if (loginBtn) {"},
-  {"line": 1040, "content": "  loginBtn.addEventListener(\"click\", () => {"},
-  {"line": 1041, "content": "    const user = (usernameInput?.value || \"\").trim();"},
-  {"line": 1042, "content": "    if (!user) {"},
-  {"line": 1043, "content": "      if (loginMsg) loginMsg.textContent = \"Por favor ingresa un nombre de usuario.\";"},
-  {"line": 1044, "content": "      return;"},
-  {"line": 1045, "content": "    }"},
-  {"line": 1046, "content": "    usuarioActual = user;"},
-  {"line": 1047, "content": "    localStorage.setItem(\"usuarioActual\", usuarioActual);"},
-  {"line": 1048, "content": "    cargarDatos();"},
-  {"line": 1049, "content": "    activarTabs(true);"},
-  {"line": 1050, "content": "    cambiarTab(\"dashboard-tab\");"},
-  {"line": 1051, "content": "    limpiarLogin();"},
-  {"line": 1052, "content": "    actualizarUI();"},
-  {"line": 1053, "content": "  });"},
-  {"line": 1054, "content": "}"},
-  {"line": 1055, "content": ""},
-  {"line": 1056, "content": "// Logout"},
-  {"line": 1057, "content": "if (logoutBtn) {"},
-  {"line": 1058, "content": "  logoutBtn.addEventListener(\"click\", () => {"},
-  {"line": 1059, "content": "    usuarioActual = null;"},
-  {"line": 1060, "content": "    localStorage.removeItem(\"usuarioActual\");"},
-  {"line": 1061, "content": "    localStorage.removeItem(`suscripcion_${usuarioActual}`); // Limpiar suscripción"},
-  {"line": 1062, "content": "    registros = [];"},
-  {"line": 1063, "content": "    activarTabs(false);"},
-  {"line": 1064, "content": "    cambiarTab(\"login-tab\");"},
-  {"line": 1065, "content": "    if (recordsList) recordsList.innerHTML = \"\";"},
-  {"line": 1066, "content": "    if (recomendacionesBox) recomendacionesBox.innerHTML = \"\";"},
-  {"line": 1067, "content": "    if (loginMsg) loginMsg.textContent = \"\";"},
-  {"line": 1068, "content": "    // destruir gráficos"},
-  {"line": 1069, "content": "    [chartSatisfaccion, chartConsumoMensual, chartCostoGramo, chartMetodo, chartMotivo, chartDesempenoSocial, chartDashboard]"},
-  {"line": 1070, "content": "      .forEach((ch) => {"},
-  {"line": 1071, "content": "        try { if (ch) ch.destroy(); } catch (e) {}"},
-  {"line": 1072, "content": "      });"},
-  {"line": 1073, "content": "    chartSatisfaccion = chartConsumoMensual = chartCostoGramo = chartMetodo = chartMotivo = chartDesempenoSocial = chartDashboard = null;"},
-  {"line": 1074, "content": "  });"},
-  {"line": 1075, "content": "}"},
-  {"line": 1076, "content": ""},
-  {"line": 1077, "content": "// Agregar registro de consumo"},
-  {"line": 1078, "content": "if (addForm) {"},
-  {"line": 1079, "content": "  addForm.addEventListener(\"submit\", (e) => {"},
-  {"line": 1080, "content": "    e.preventDefault();"},
-  {"line": 1081, "content": "    if (!usuarioActual) {"},
-  {"line": 1082, "content": "      if (addMsg) addMsg.textContent = \"Debes iniciar sesión primero.\";"},
-  {"line": 1083, "content": "      return;"},
-  {"line": 1084, "content": "    }"},
-  {"line": 1085, "content": ""},
-  {"line": 1086, "content": "    const fecha = document.getElementById(\"fecha\").value;"},
-  {"line": 1087, "content": "    const tipo = document.getElementById(\"tipo\").value.trim();"},
-  {"line": 1088, "content": "    const proveedor = document.getElementById(\"proveedor\").value.trim();"},
-  {"line": 1089, "content": "    const cantidad = parseFloat(document.getElementById(\"cantidad\").value);"},
-  {"line": 1090, "content": "    const precio = parseFloat(document.getElementById(\"precio\").value);"},
-  {"line": 1091, "content": "    const motivo = document.getElementById(\"motivo\").value.trim();"},
-  {"line": 1092, "content": "    const metodo = document.getElementById(\"metodo\").value.trim();"},
-  {"line": 1093, "content": "    const satisfaccion = parseInt(document.getElementById(\"satisfaccion\").value, 10);"},
-  {"line": 1094, "content": "    const efectos = document.getElementById(\"efectos\").value.trim();"},
-  {"line": 1095, "content": "    const consciente = document.getElementById(\"consciente\").value === \"true\";"},
-  {"line": 1096, "content": ""},
-  {"line": 1097, "content": "    // Verificar límites de plan gratuito"},
-  {"line": 1098, "content": "    if (!verificarLimitesGratis()) {"},
-  {"line": 1099, "content": "      addMsg.textContent = \"🔒 Límite alcanzado. Suscríbete para más registros\";"},
-  {"line": 1100, "content": "      addMsg.style.color = \"var(--danger-color)\";"},
-  {"line": 1101, "content": "      return;"},
-  {"line": 1102, "content": "    }"},
-  {"line": 1103, "content": ""},
-  {"line": 1104, "content": "    // Validar datos"},
-  {"line": 1105, "content": "    if (!fecha || !tipo || !proveedor || !cantidad || !precio || !motivo || !metodo || !satisfaccion) {"},
-  {"line": 1106, "content": "      addMsg.textContent = \"⚠️ Completa todos los campos obligatorios\";"},
-  {"line": 1107, "content": "      addMsg.style.color = \"var(--danger-color)\";"},
-  {"line": 1108, "content": "      return;"},
-  {"line": 1109, "content": "    }"},
-  {"line": 1110, "content": ""},
-  {"line": 1111, "content": "    const nuevo = {"},
-  {"line": 1112, "content": "      fecha: fecha,"},
-  {"line": 1113, "content": "      tipo: tipo,"},
-  {"line": 1114, "content": "      proveedor: proveedor,"},
-  {"line": 1115, "content": "      cantidadGramos: cantidad,"},
-  {"line": 1116, "content": "      precioTotal: precio,"},
-  {"line": 1117, "content": "      motivo: motivo,"},
-  {"line": 1118, "content": "      metodoConsumo: metodo,"},
-  {"line": 1119, "content": "      satisfaccion: satisfaccion,"},
-  {"line": 1120, "content": "      efectosSecundarios: efectos,"},
-  {"line": 1121, "content": "      consciente: consciente,"},
-  {"line": 1122, "content": "    };"},
-  {"line": 1123, "content": ""},
-  {"line": 1124, "content": "    registros.push(nuevo);"},
-  {"line": 1125, "content": "    guardarDatos();"},
-  {"line": 1126, "content": "    actualizarUI();"},
-  {"line": 1127, "content": ""},
-  {"line": 1128, "content": "    addForm.reset();"},
-  {"line": 1129, "content": "    if (addMsg) addMsg.textContent = \"✅ Registro agregado correctamente.\";"},
-  {"line": 1130, "content": "  });"},
-  {"line": 1131, "content": "}"},
-  {"line": 1132, "content": ""},
-  {"line": 1133, "content": "// Buscar en registros"},
-  {"line": 1134, "content": "if (searchRecordsInput) {"},
-  {"line": 1135, "content": "  searchRecordsInput.addEventListener(\"input\", debounce(() => mostrarRegistros(), 150));"},
-  {"line": 1136, "content": "}"},
-  {"line": 1137, "content": ""},
-  {"line": 1138, "content": "// Formulario de desempeño social"},
-  {"line": 1139, "content": "if (socialForm) {"},
-  {"line": 1140, "content": "  socialForm.addEventListener(\"submit\", (e) => {"},
-  {"line": 1141, "content": "    e.preventDefault();"},
-  {"line": 1142, "content": ""},
-  {"line": 1143, "content": "    if (!usuarioActual) {"},
-  {"line": 1144, "content": "      if (socialMsg) socialMsg.textContent = \"Debes iniciar sesión primero.\";"},
-  {"line": 1145, "content": "      return;"},
-  {"line": 1146, "content": "    }"},
-  {"line": 1147, "content": ""},
-  {"line": 1148, "content": "    const nuevoSocial = {"},
-  {"line": 1149, "content": "      fecha: new Date().toISOString().slice(0, 10),"},
-  {"line": 1150, "content": "      interaccionesSociales: document.getElementById(\"interaccionesSociales\").value,"},
-  {"line": 1151, "content": "      desempenoLaboral: document.getElementById(\"desempenoLaboral\").value,"},
-  {"line": 1152, "content": "      estadoAnimo: document.getElementById(\"estadoAnimo\").value,"},
-  {"line": 1153, "content": "    };"},
-  {"line": 1154, "content": ""},
-  {"line": 1155, "content": "    const datosSocial = cargarDatosSocial();"},
-  {"line": 1156, "content": "    datosSocial.push(nuevoSocial);"},
-  {"line": 1157, "content": "    guardarDatosSocial(datosSocial);"},
-  {"line": 1158, "content": ""},
-  {"line": 1159, "content": "    if (socialMsg) socialMsg.textContent = \"✅ Desempeño social registrado correctamente.\";"},
-  {"line": 1160, "content": "    socialForm.reset();"},
-  {"line": 1161, "content": ""},
-  {"line": 1162, "content": "    mostrarRegistrosSociales();"},
-  {"line": 1163, "content": "    inicializarGraficoSocial();"},
-  {"line": 1164, "content": "    setTimeout(resizeAllCharts, 50);"},
-  {"line": 1165, "content": "  });"},
-  {"line": 1166, "content": "}"},
-  {"line": 1167, "content": ""},
-  {"line": 1168, "content": "// Theme toggle"},
-  {"line": 1169, "content": "if (themeToggle) {"},
-  {"line": 1170, "content": "  themeToggle.addEventListener(\"click\", toggleTheme);"},
-  {"line": 1171, "content": "}"},
-  {"line": 1172, "content": ""},
-  {"line": 1173, "content": "// Export PDF event"},
-  {"line": 1174, "content": "if (exportPDFBtn) {"},
-  {"line": 1175, "content": "  exportPDFBtn.addEventListener(\"click\", exportarPDF);"},
-  {"line": 1176, "content": "}"},
-  {"line": 1177, "content": ""},
-  {"line": 1178, "content": "/* =========================="},
-  {"line": 1179, "content": "   Inicialización"},
-  {"line": 1180, "content": "   ========================= */"},
-  {"line": 1181, "content": "window.addEventListener(\"load\", () => {"},
-  {"line": 1182, "content": "  aplicarTemaGuardado();"},
-  {"line": 1183, "content": "  usuarioActual = localStorage.getItem(\"usuarioActual\");"},
-  {"line": 1184, "content": "  if (usuarioActual) {"},
-  {"line": 1185, "content": "    suscripcionActual = localStorage.getItem(`suscripcion_${usuarioActual}`) || \"gratis\"; // Cargar suscripción"},
-  {"line": 1186, "content": "    activarTabs(true);"},
-  {"line": 1187, "content": "    cambiarTab(\"dashboard-tab\");"},
-  {"line": 1188, "content": "    cargarDatos();"},
-  {"line": 1189, "content": "    actualizarUI();"},
-  {"line": 1190, "content": "    actualizarInterfazPremium(); // Actualizar UI según suscripción"},
-  {"line": 1191, "content": "  } else {"},
-  {"line": 1192, "content": "    activarTabs(false);"},
-  {"line": 1193, "content": "    cambiarTab(\"login-tab\");"},
-  {"line": 1194, "content": "  }"},
-  {"line": 1195, "content": ""},
-  {"line": 1196, "content": "  // Mostrar botón de tema siempre"},
-  {"line": 1197, "content": "  if (themeToggle) {"},
-  {"line": 1198, "content": "    themeToggle.hidden = false;"},
-  {"line": 1199, "content": "  }"},
-  {"line": 1200, "content": "});"},
-  {"line": 1201, "content": ""},
-  {"line": 1202, "content": "// Redimensionar gráficos al cambiar tamaño de ventana"},
-  {"line": 1203, "content": "window.addEventListener(\"resize\", debounce(resizeAllCharts, 100));"},
-  {"line": 1204, "content": ""},
-  {"line": 1205, "content": "// Observa mutaciones por si el CSS/DOM cambian tamaños de contenedor"},
-  {"line": 1206, "content": "const ro = new ResizeObserver(debounce(() => resizeAllCharts(), 80));"},
-  {"line": 1207, "content": "document.querySelectorAll(\".chart-container\").forEach((c) => ro.observe(c));"},
-  {"line": 1208, "content": ""},
-  {"line": 1209, "content": "/* =========================="},
-  {"line": 1210, "content": "   Funciones Premium"},
-  {"line": 1211, "content": "   ========================= */"},
-  {"line": 1212, "content": "/** Verifica si el usuario actual ha excedido el límite de registros del plan gratuito */"},
-  {"line": 1213, "content": "function verificarLimitesGratis() {"},
-  {"line": 1214, "content": "  if (suscripcionActual !== 'gratis') return true; // Usuarios premium no tienen límites"},
-  {"line": 1215, "content": "  const limiteRegistrosGratis = 10; // Límite de 10 registros para el plan gratuito"},
-  {"line": 1216, "content": "  return registros.length < limiteRegistrosGratis;"},
-  {"line": 1217, "content": "}"},
-  {"line": 1218, "content": ""},
-  {"line": 1219, "content": "/** Actualiza la interfaz para reflejar el estado de la suscripción */"},
-  {"line": 1220, "content": "function actualizarInterfazPremium() {"},
-  {"line": 1221, "content": "  const premiumFeatures = document.querySelectorAll('.premium-feature');"},
-  {"line": 1222, "content": "  const upgradeButtons = document.querySelectorAll('.upgrade-button');"},
-  {"line": 1223, "content": ""},
-  {"line": 1224, "content": "  premiumFeatures.forEach(el => {"},
-  {"line": 1225, "content": "    if (suscripcionActual === 'gratis') {"},
-  {"line": 1226, "content": "      el.style.display = 'none'; // Ocultar funciones premium"},
-  {"line": 1227, "content": "    } else {"},
-  {"line": 1228, "content": "      el.style.display = ''; // Mostrar funciones premium"},
-  {"line": 1229, "content": "    }"},
-  {"line": 1230, "content": "  });"},
-  {"line": 1231, "content": ""},
-  {"line": 1232, "content": "  upgradeButtons.forEach(btn => {"},
-  {"line": 1233, "content": "    if (suscripcionActual === 'gratis') {"},
-  {"line": 1234, "content": "      btn.style.display = ''; // Mostrar botón de upgrade"},
-  {"line": 1235, "content": "    } else {"},
-  {"line": 1236, "content": "      btn.style.display = 'none'; // Ocultar botón de upgrade"},
-  {"line": 1237, "content": "    }"},
-  {"line": 1238, "content": "  });"},
-  {"line": 1239, "content": ""},
-  {"line": 1240, "content": "  // Opcional: Actualizar texto de bienvenida con el plan"},
-  {"line": 1241, "content": "  const welcomeMsgEl = document.getElementById('loginMsg');"},
-  {"line": 1242, "content": "  if (welcomeMsgEl && usuarioActual) {"},
-  {"line": 1243, "content": "      welcomeMsgEl.textContent = `✅ Bienvenido, ${usuarioActual}! (Plan: ${suscripcionActual.toUpperCase()})`;"},
-  {"line": 1244, "content": "  }"},
-  {"line": 1245, "content": "}"},
-  {"line": 1246, "content": ""},
-  {"line": 1247, "content": "/** Simula la suscripción a un plan */"},
-  {"line": 1248, "content": "function suscribirseA(plan) {"},
-  {"line": 1249, "content": "  if (!usuarioActual) {"},
-  {"line": 1250, "content": "    alert(\"Debes iniciar sesión para suscribirte.\");"},
-  {"line": 1251, "content": "    return;"},
-  {"line": 1252, "content": "  }"},
-  {"line": 1253, "content": "  suscripcionActual = plan;"},
-  {"line": 1254, "content": "  localStorage.setItem(`suscripcion_${usuarioActual}`, plan);"},
-  {"line": 1255, "content": "  actualizarInterfazPremium();"},
-  {"line": 1256, "content": "  alert(`¡Gracias por suscribirte al plan ${plan.toUpperCase()}!`);"},
-  {"line": 1257, "content": "}"},
-  {"line": 1258, "content": ""},
-  {"line": 1259, "content": "/** Maneja el evento de clic para los botones de suscripción */"},
-  {"line": 1260, "content": "function manejarSuscripcion() {"},
-  {"line": 1261, "content": "  const premiumBtn = document.getElementById('premiumBtn');"},
-  {"line": 1262, "content": "  const proBtn = document.getElementById('proBtn');"},
-  {"line": 1263, "content": ""},
-  {"line": 1264, "content": "  if (premiumBtn) {"},
-  {"line": 1265, "content": "    premiumBtn.addEventListener('click', () => suscribirseA('premium'));"},
-  {"line": 1266, "content": "  }"},
-  {"line": 1267, "content": "  if (proBtn) {"},
-  {"line": 1268, "content": "    proBtn.addEventListener('click', () => suscribirseA('pro'));"},
-  {"line": 1269, "content": "  }"},
-  {"line": 1270, "content": "}"},
-  {"line": 1271, "content": "/* =========================="},
-  {"line": 1272, "content": "   Fin del archivo"},
-  {"line": 1273, "content": "   ========================= */"},
-  {"line": 1274, "content": "} catch (e) {"},
-  {"line": 1275, "content": "  console.error(e);"},
-  {"line": 1276, "content": "}"}
-]
+/* =========================================================================
+   Control Consumo Cannabis Pro - script.js
+   - Totalmente responsivo (Chart.js con maintainAspectRatio: false)
+   - Corrección de IDs y tab social (graficoSocial)
+   - Resize automático al mostrar pestañas con gráficos
+   - Persistencia por usuario en localStorage
+   - Recomendaciones básicas
+   - Estructura robusta y comentada
+   ========================================================================= */
+
+/* =========================
+   Estado global y referencias
+   ========================= */
+let registros = [];
+let usuarioActual = null;
+
+// Tabs y secciones
+const tabs = document.querySelectorAll(".tabs button[data-tab]");
+const sections = document.querySelectorAll("main .tab");
+
+// Login
+const loginBtn = document.getElementById("loginBtn");
+const logoutBtn = document.getElementById("logoutBtn");
+const usernameInput = document.getElementById("usernameInput");
+const loginMsg = document.getElementById("loginMsg");
+
+// Agregar registro
+const addForm = document.getElementById("addForm");
+const addMsg = document.getElementById("addMsg");
+
+// Registros
+const recordsList = document.getElementById("recordsList");
+const searchRecordsInput = document.getElementById("searchRecordsInput");
+
+// Recomendaciones
+const recomendacionesBox = document.getElementById("recomendacionesBox");
+
+// Desempeño social
+const socialForm = document.getElementById("socialForm");
+const socialMsg = document.getElementById("socialMsg");
+const socialRecordsList = document.getElementById("socialRecordsList"); // opcional (si lo agregas en HTML)
+
+// Gráficos (Chart.js)
+let chartSatisfaccion = null;
+let chartConsumoMensual = null;
+let chartCostoGramo = null;
+let chartMetodo = null;
+let chartMotivo = null;
+let chartDesempenoSocial = null;
+let chartDashboard = null;
+
+// Theme toggle
+const themeToggle = document.getElementById("themeToggle");
+
+// Export PDF
+const exportPDFBtn = document.getElementById("exportPDFBtn");
+const exportMsg = document.getElementById("exportMsg");
+
+/* =========================
+   Utilidades
+   ========================= */
+
+/** Devuelve el contexto 2D del canvas si existe, o null si no está presente */
+function ctxOf(id) {
+  const el = document.getElementById(id);
+  if (!el) return null;
+  const ctx = el.getContext("2d");
+  return ctx || null;
+}
+
+/** Activa o desactiva tabs (excepto login) y muestra/oculta logout */
+function activarTabs(estado) {
+  tabs.forEach((btn) => {
+    if (btn.getAttribute("data-tab") !== "login-tab") btn.disabled = !estado;
+  });
+  if (logoutBtn) {
+    logoutBtn.hidden = !estado;
+  }
+  // Siempre mostrar el botón de tema
+  if (themeToggle) {
+    themeToggle.hidden = false;
+  }
+}
+
+/** Cambia la pestaña visible y dispara resize de gráficos si corresponde */
+function cambiarTab(tabId) {
+  // Activar botón correcto
+  tabs.forEach((b) => b.classList.remove("active"));
+  sections.forEach((s) => s.classList.remove("active"));
+
+  const btn = Array.from(tabs).find((b) => b.getAttribute("data-tab") === tabId);
+  if (btn) btn.classList.add("active");
+
+  const sec = Array.from(sections).find((s) => s.id === tabId);
+  if (sec) sec.classList.add("active");
+
+  // Al mostrar una sección con gráficos, forzamos resize después del reflow
+  if (tabId === "stats-tab" || tabId === "social-tab" || tabId === "dashboard-tab") {
+    setTimeout(resizeAllCharts, 50);
+  }
+}
+
+/** Limpia inputs de login */
+function limpiarLogin() {
+  if (usernameInput) usernameInput.value = "";
+  if (loginMsg) loginMsg.textContent = "";
+}
+
+/** Forzar resize de todos los gráficos visibles */
+function resizeAllCharts() {
+  [chartSatisfaccion, chartConsumoMensual, chartCostoGramo, chartMetodo, chartMotivo, chartDesempenoSocial, chartDashboard]
+    .forEach((ch) => {
+      try {
+        if (ch) ch.resize();
+      } catch (e) {
+        // no-op
+      }
+    });
+}
+
+/** Debounce simple */
+function debounce(fn, delay = 250) {
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), delay);
+  };
+}
+
+/* =========================
+   Persistencia (localStorage)
+   ========================= */
+function guardarDatos() {
+  if (!usuarioActual) return;
+  localStorage.setItem("registros_" + usuarioActual, JSON.stringify(registros));
+}
+
+function cargarDatos() {
+  if (!usuarioActual) {
+    registros = [];
+    return;
+  }
+  const datos = localStorage.getItem("registros_" + usuarioActual);
+  registros = datos ? JSON.parse(datos) : [];
+}
+
+function cargarDatosSocial() {
+  if (!usuarioActual) return [];
+  const datosSocial = localStorage.getItem("desempenoSocial_" + usuarioActual);
+  return datosSocial ? JSON.parse(datosSocial) : [];
+}
+
+function guardarDatosSocial(data) {
+  if (!usuarioActual) return;
+  localStorage.setItem("desempenoSocial_" + usuarioActual, JSON.stringify(data));
+}
+
+/* =========================
+   Render UI
+   ========================= */
+function actualizarUI() {
+  actualizarDashboard();
+  mostrarRegistros();
+  inicializarGraficos();
+  mostrarRecomendaciones();
+  mostrarRegistrosSociales();
+  inicializarGraficoSocial();
+  inicializarGraficoDashboard();
+}
+
+/** Actualiza las métricas del dashboard */
+function actualizarDashboard() {
+  const totalRegistrosEl = document.getElementById("totalRegistros");
+  const gastoTotalEl = document.getElementById("gastoTotal");
+  const consumoTotalEl = document.getElementById("consumoTotal");
+  const satisfaccionPromedioEl = document.getElementById("satisfaccionPromedio");
+
+  if (!totalRegistrosEl) return;
+
+  const totalRegistros = registros.length;
+  const gastoTotal = registros.reduce((sum, r) => sum + (Number(r.precioTotal) || 0), 0);
+  const consumoTotal = registros.reduce((sum, r) => sum + (Number(r.cantidadGramos) || 0), 0);
+  const satisfaccionPromedio = totalRegistros > 0 
+    ? registros.reduce((sum, r) => sum + (Number(r.satisfaccion) || 0), 0) / totalRegistros 
+    : 0;
+
+  totalRegistrosEl.textContent = totalRegistros.toLocaleString();
+  gastoTotalEl.textContent = `$${gastoTotal.toFixed(2)}`;
+  consumoTotalEl.textContent = `${consumoTotal.toFixed(1)}g`;
+  satisfaccionPromedioEl.textContent = `${satisfaccionPromedio.toFixed(1)}/10`;
+}
+
+/** Registros con filtro por tipo o proveedor */
+function mostrarRegistros() {
+  if (!recordsList) return;
+
+  const filtro = (searchRecordsInput?.value || "").trim().toLowerCase();
+  const filtrados = registros.filter(
+    (r) =>
+      r.tipo.toLowerCase().includes(filtro) ||
+      r.proveedor.toLowerCase().includes(filtro)
+  );
+
+  if (filtrados.length === 0) {
+    recordsList.innerHTML = "<p>No hay registros que coincidan.</p>";
+    return;
+  }
+
+  recordsList.innerHTML = filtrados
+    .map(
+      (r) => `
+      <div class="record-item">
+        <div><strong>Fecha:</strong> ${r.fecha}</div>
+        <div><strong>Tipo:</strong> ${r.tipo}</div>
+        <div><strong>Proveedor:</strong> ${r.proveedor}</div>
+        <div><strong>Cantidad:</strong> ${r.cantidadGramos}g</div>
+        <div><strong>Precio:</strong> $${r.precioTotal.toFixed(2)}</div>
+        <div><strong>Motivo:</strong> ${r.motivo}</div>
+        <div><strong>Método:</strong> ${r.metodoConsumo}</div>
+        <div><strong>Satisfacción:</strong> ${r.satisfaccion}</div>
+        <div><strong>Efectos secundarios:</strong> ${r.efectosSecundarios || "-"}</div>
+      </div>
+    `
+    )
+    .join("");
+}
+
+/** Recomendaciones en base a los datos */
+function mostrarRecomendaciones() {
+  if (!recomendacionesBox) return;
+  if (registros.length === 0) {
+    recomendacionesBox.innerHTML = "<p>No hay datos para recomendaciones.</p>";
+    return;
+  }
+
+  let texto = "<ul>";
+  if (registros.length > 20)
+    texto += "<li>Considera hacer un descanso o disminuir frecuencia.</li>";
+
+  const gastoPromedio =
+    registros.reduce((acc, r) => acc + r.precioTotal, 0) / registros.length;
+  if (gastoPromedio > 1000)
+    texto += "<li>Revisa tu presupuesto mensual, podrías ahorrar más.</li>";
+
+  if (registros.some((r) => (r.efectosSecundarios || "").toLowerCase().includes("ansiedad")))
+    texto += "<li>Si experimentas ansiedad, prueba variedades con mayor CBD.</li>";
+
+  texto += "<li>Mantén un registro constante para mejorar tu experiencia.</li></ul>";
+  recomendacionesBox.innerHTML = texto;
+}
+
+/* =========================
+   Cálculos para gráficos
+   ========================= */
+function mesesOrdenados() {
+  // Devuelve lista única de AAAA-MM ordenada
+  return Array.from(new Set(registros.map((r) => r.fecha.slice(0, 7)))).sort();
+}
+
+function calcularConsumoMensual() {
+  const meses = {};
+  registros.forEach((r) => {
+    const mes = r.fecha.slice(0, 7);
+    if (!meses[mes]) meses[mes] = 0;
+    meses[mes] += Number(r.cantidadGramos) || 0;
+  });
+  return meses;
+}
+
+function calcularCostoPromedioPorGramo() {
+  const costoPorMes = {};
+  registros.forEach((r) => {
+    const mes = r.fecha.slice(0, 7);
+    if (!costoPorMes[mes]) costoPorMes[mes] = { totalPrecio: 0, totalGramos: 0 };
+    costoPorMes[mes].totalPrecio += Number(r.precioTotal) || 0;
+    costoPorMes[mes].totalGramos += Number(r.cantidadGramos) || 0;
+  });
+
+  const promedio = {};
+  for (const mes in costoPorMes) {
+    const g = costoPorMes[mes].totalGramos || 1;
+    promedio[mes] = costoPorMes[mes].totalPrecio / g;
+  }
+  return promedio;
+}
+
+function calcularFrecuenciaPorMetodo() {
+  const metodos = {};
+  registros.forEach((r) => {
+    const met = (r.metodoConsumo || "").toLowerCase();
+    if (!met) return;
+    metodos[met] = (metodos[met] || 0) + 1;
+  });
+  return metodos;
+}
+
+function calcularSatisfaccionPorMotivo() {
+  const motivos = {};
+  registros.forEach((r) => {
+    const mot = (r.motivo || "").toLowerCase();
+    if (!mot) return;
+    if (!motivos[mot]) motivos[mot] = { total: 0, count: 0 };
+    motivos[mot].total += Number(r.satisfaccion) || 0;
+    motivos[mot].count++;
+  });
+
+  const promedios = {};
+  for (const mot in motivos) {
+    promedios[mot] = motivos[mot].total / (motivos[mot].count || 1);
+  }
+  return promedios;
+}
+
+/* =========================
+   Gráficos (Stats)
+   ========================= */
+function crearGradienteVertical(ctx, color1, color2) {
+  const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+  gradient.addColorStop(0, color1);
+  gradient.addColorStop(1, color2);
+  return gradient;
+}
+
+function inicializarGraficos() {
+  // Destruir si existen
+  if (chartSatisfaccion) chartSatisfaccion.destroy();
+  if (chartConsumoMensual) chartConsumoMensual.destroy();
+  if (chartCostoGramo) chartCostoGramo.destroy();
+  if (chartMetodo) chartMetodo.destroy();
+  if (chartMotivo) chartMotivo.destroy();
+
+  if (!registros.length) return;
+
+  // 1) Satisfacción mensual promedio
+  const ctxSat = ctxOf("graficoSatisfaccion");
+  if (ctxSat) {
+    const gradientSat = crearGradienteVertical(ctxSat, "#00ffea", "#007acc");
+    const meses = mesesOrdenados();
+    const satPorMes = meses.map((mes) => {
+      const regs = registros.filter((r) => r.fecha.slice(0, 7) === mes);
+      const total = regs.reduce((acc, r) => acc + (Number(r.satisfaccion) || 0), 0);
+      return regs.length ? total / regs.length : 0;
+    });
+
+    chartSatisfaccion = new Chart(ctxSat, {
+      type: "line",
+      data: {
+        labels: meses,
+        datasets: [
+          {
+            label: "Satisfacción Promedio",
+            data: satPorMes,
+            borderColor: "#00ffe7",
+            backgroundColor: gradientSat,
+            fill: true,
+            tension: 0.4,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            pointBackgroundColor: "#00ffe7",
+            borderWidth: 2,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false, // clave para usar altura del contenedor
+        scales: {
+          y: {
+            min: 0,
+            max: 10,
+            grid: { borderDash: [5, 5], color: "#00ffe7aa" },
+            ticks: { color: "#00ffe7" },
+          },
+          x: {
+            grid: { display: false },
+            ticks: { color: "#00ffe7" },
+          },
+        },
+        plugins: {
+          legend: { labels: { color: "#00ffe7" } },
+          tooltip: {
+            backgroundColor: "#00ffe7cc",
+            titleColor: "#000",
+            bodyColor: "#000",
+            cornerRadius: 10,
+            padding: 10,
+          },
+        },
+        animation: { duration: 900, easing: "easeInOutQuad" },
+      },
+    });
+  }
+
+  // 2) Consumo mensual (gramos)
+  const ctxCons = ctxOf("graficoConsumoMensual");
+  if (ctxCons) {
+    const consumoMensual = calcularConsumoMensual();
+    const labels = Object.keys(consumoMensual).sort();
+    const dataVals = labels.map((m) => consumoMensual[m]);
+    const grad = crearGradienteVertical(ctxCons, "#ff00ff", "#800080");
+
+    chartConsumoMensual = new Chart(ctxCons, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Consumo mensual (gramos)",
+            data: dataVals,
+            backgroundColor: grad,
+            borderRadius: 10,
+            borderSkipped: false,
+            hoverBackgroundColor: "#ff6fff",
+            barPercentage: 0.7,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { borderDash: [3, 3], color: "#ff00ffaa" },
+            ticks: { color: "#ff00ff" },
+          },
+          x: {
+            grid: { display: false },
+            ticks: { color: "#ff00ff" },
+          },
+        },
+        plugins: {
+          legend: { labels: { color: "#ff00ff" } },
+          tooltip: {
+            backgroundColor: "#ff00ffcc",
+            titleColor: "#000",
+            bodyColor: "#000",
+            cornerRadius: 6,
+            padding: 8,
+          },
+        },
+        animation: { duration: 800, easing: "easeOutQuart" },
+      },
+    });
+  }
+
+  // 3) Costo promedio por gramo
+  const ctxCosto = ctxOf("graficoCostoGramo");
+  if (ctxCosto) {
+    const costoProm = calcularCostoPromedioPorGramo();
+    const labels = Object.keys(costoProm).sort();
+    const dataVals = labels.map((m) => costoProm[m]);
+    const grad = crearGradienteVertical(ctxCosto, "#00ff00", "#006600");
+
+    chartCostoGramo = new Chart(ctxCosto, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Costo promedio por gramo ($)",
+            data: dataVals,
+            borderColor: "#00ff00",
+            backgroundColor: grad,
+            fill: true,
+            tension: 0.3,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            borderWidth: 2,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color: "#00ff0077", borderDash: [4, 4] },
+            ticks: { color: "#00ff00" },
+          },
+          x: {
+            ticks: { color: "#00ff00" },
+            grid: { display: false },
+          },
+        },
+        plugins: {
+          legend: { labels: { color: "#00ff00" } },
+          tooltip: {
+            backgroundColor: "#00ff0077",
+            titleColor: "#000",
+            bodyColor: "#000",
+            cornerRadius: 5,
+            padding: 7,
+          },
+        },
+        animation: { duration: 800, easing: "easeInOutCubic" },
+      },
+    });
+  }
+
+  // 4) Frecuencia por método (doughnut)
+  const ctxMetodo = ctxOf("graficoMetodo");
+  if (ctxMetodo) {
+    const frecMetodo = calcularFrecuenciaPorMetodo();
+    const labels = Object.keys(frecMetodo).map((m) => m.charAt(0).toUpperCase() + m.slice(1));
+    const dataVals = Object.values(frecMetodo);
+    const coloresMetodo = ["#ff6384", "#36a2eb", "#ffce56", "#4bc0c0", "#9966ff", "#ff9f40"];
+
+    chartMetodo = new Chart(ctxMetodo, {
+      type: "doughnut",
+      data: {
+        labels,
+        datasets: [
+          {
+            data: dataVals,
+            backgroundColor: coloresMetodo,
+            borderColor: "#0d1117",
+            borderWidth: 2,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: "right", labels: { color: "#79c0ff" } },
+          tooltip: {
+            backgroundColor: "#79c0ffcc",
+            titleColor: "#000",
+            bodyColor: "#000",
+            cornerRadius: 6,
+            padding: 6,
+          },
+        },
+        animation: { duration: 700 },
+      },
+    });
+  }
+
+  // 5) Satisfacción por motivo (bar horizontal)
+  const ctxMotivo = ctxOf("graficoMotivo");
+  if (ctxMotivo) {
+    const satMotivo = calcularSatisfaccionPorMotivo();
+    const labels = Object.keys(satMotivo).map((m) => m.charAt(0).toUpperCase() + m.slice(1));
+    const dataVals = Object.values(satMotivo);
+    const grad = crearGradienteVertical(ctxMotivo, "#ff4500", "#ffa500");
+
+    chartMotivo = new Chart(ctxMotivo, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Satisfacción promedio",
+            data: dataVals,
+            backgroundColor: grad,
+            borderRadius: 8,
+          },
+        ],
+      },
+      options: {
+        indexAxis: "y",
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            min: 0,
+            max: 10,
+            ticks: { color: "#ffa500" },
+            grid: { color: "#ffa50055", borderDash: [3, 3] },
+          },
+          y: {
+            ticks: { color: "#ffa500" },
+            grid: { display: false },
+          },
+        },
+        plugins: {
+          legend: { labels: { color: "#ffa500" } },
+          tooltip: {
+            backgroundColor: "#ffa500cc",
+            titleColor: "#000",
+            bodyColor: "#000",
+            cornerRadius: 8,
+            padding: 8,
+          },
+        },
+        animation: { duration: 800, easing: "easeOutQuart" },
+      },
+    });
+  }
+}
+
+/** Gráfico resumen para dashboard - últimos 30 días */
+function inicializarGraficoDashboard() {
+  if (chartDashboard) {
+    chartDashboard.destroy();
+    chartDashboard = null;
+  }
+
+  if (!registros.length) return;
+
+  const ctx = ctxOf("graficoDashboard");
+  if (!ctx) return;
+
+  // Filtrar últimos 30 días
+  const hace30Dias = new Date();
+  hace30Dias.setDate(hace30Dias.getDate() - 30);
+
+  const registrosRecientes = registros.filter(r => {
+    const fechaRegistro = new Date(r.fecha);
+    return fechaRegistro >= hace30Dias;
+  });
+
+  if (registrosRecientes.length === 0) return;
+
+  // Agrupar por día
+  const datosPorDia = {};
+  registrosRecientes.forEach(r => {
+    const dia = r.fecha;
+    if (!datosPorDia[dia]) {
+      datosPorDia[dia] = { consumo: 0, gasto: 0, satisfaccion: 0, count: 0 };
+    }
+    datosPorDia[dia].consumo += Number(r.cantidadGramos) || 0;
+    datosPorDia[dia].gasto += Number(r.precioTotal) || 0;
+    datosPorDia[dia].satisfaccion += Number(r.satisfaccion) || 0;
+    datosPorDia[dia].count += 1;
+  });
+
+  const dias = Object.keys(datosPorDia).sort();
+  const consumoDiario = dias.map(d => datosPorDia[d].consumo);
+  const satisfaccionDiaria = dias.map(d => datosPorDia[d].satisfaccion / datosPorDia[d].count);
+
+  const gradient1 = crearGradienteVertical(ctx, "#00ffe7", "#007acc");
+  const gradient2 = crearGradienteVertical(ctx, "#ff6384", "#ff1744");
+
+  chartDashboard = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: dias.map(d => new Date(d).toLocaleDateString()),
+      datasets: [
+        {
+          label: "Consumo (g)",
+          data: consumoDiario,
+          borderColor: "#00ffe7",
+          backgroundColor: gradient1,
+          fill: false,
+          tension: 0.4,
+          yAxisID: "y",
+        },
+        {
+          label: "Satisfacción",
+          data: satisfaccionDiaria,
+          borderColor: "#ff6384",
+          backgroundColor: gradient2,
+          fill: false,
+          tension: 0.4,
+          yAxisID: "y1",
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false,
+      },
+      scales: {
+        x: {
+          ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-primary') },
+          grid: { display: false },
+        },
+        y: {
+          type: 'linear',
+          display: true,
+          position: 'left',
+          ticks: { color: "#00ffe7" },
+          grid: { color: "#00ffe755" },
+        },
+        y1: {
+          type: 'linear',
+          display: true,
+          position: 'right',
+          min: 0,
+          max: 10,
+          ticks: { color: "#ff6384" },
+          grid: { drawOnChartArea: false },
+        },
+      },
+      plugins: {
+        legend: { 
+          labels: { 
+            color: getComputedStyle(document.documentElement).getPropertyValue('--text-primary')
+          } 
+        },
+        tooltip: {
+          backgroundColor: "rgba(13, 17, 23, 0.9)",
+          titleColor: "#00ffe7",
+          bodyColor: "#c9d1d9",
+          cornerRadius: 8,
+        },
+      },
+      animation: { duration: 800 },
+    },
+  });
+}
+
+/* =========================
+   Export PDF Function
+   ========================= */
+function exportarPDF() {
+  if (!usuarioActual || registros.length === 0) {
+    if (exportMsg) {
+      exportMsg.textContent = "❌ No hay datos para exportar";
+      exportMsg.style.color = "var(--danger-color)";
+    }
+    return;
+  }
+
+  if (exportMsg) {
+    exportMsg.textContent = "📄 Generando PDF...";
+    exportMsg.style.color = "var(--accent-primary)";
+  }
+
+  try {
+    // Usar jsPDF para generar PDF real
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    const fecha = new Date().toLocaleDateString('es-ES');
+    const totalRegistros = registros.length;
+    const gastoTotal = registros.reduce((sum, r) => sum + (Number(r.precioTotal) || 0), 0);
+    const consumoTotal = registros.reduce((sum, r) => sum + (Number(r.cantidadGramos) || 0), 0);
+    const satisfaccionPromedio = totalRegistros > 0 
+      ? registros.reduce((sum, r) => sum + (Number(r.satisfaccion) || 0), 0) / totalRegistros 
+      : 0;
+
+    const datosSocial = cargarDatosSocial();
+
+    // Configurar fuente y colores
+    doc.setFont("helvetica");
+    
+    // Header
+    doc.setFontSize(18);
+    doc.setTextColor(9, 105, 218);
+    doc.text("🌿 Control Cannabis Pro", 105, 20, { align: "center" });
+    
+    doc.setFontSize(14);
+    doc.text(`Reporte Completo de ${usuarioActual}`, 105, 30, { align: "center" });
+    
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Generado el: ${fecha}`, 105, 40, { align: "center" });
+    
+    // Línea separadora
+    doc.line(20, 45, 190, 45);
+    
+    let yPos = 55;
+    
+    // Resumen ejecutivo
+    doc.setFontSize(12);
+    doc.setTextColor(9, 105, 218);
+    doc.text("📊 Resumen Ejecutivo", 20, yPos);
+    yPos += 10;
+    
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Total Registros: ${totalRegistros}`, 20, yPos);
+    doc.text(`Gasto Total: $${gastoTotal.toFixed(2)}`, 70, yPos);
+    yPos += 7;
+    doc.text(`Consumo Total: ${consumoTotal.toFixed(1)}g`, 20, yPos);
+    doc.text(`Satisfacción Promedio: ${satisfaccionPromedio.toFixed(1)}/10`, 70, yPos);
+    yPos += 15;
+    
+    // Historial de registros
+    doc.setFontSize(12);
+    doc.setTextColor(9, 105, 218);
+    doc.text("📋 Historial de Registros", 20, yPos);
+    yPos += 10;
+    
+    // Tabla de registros (simplificada para PDF)
+    doc.setFontSize(8);
+    doc.setTextColor(0, 0, 0);
+    
+    // Headers de tabla
+    doc.text("Fecha", 20, yPos);
+    doc.text("Tipo", 45, yPos);
+    doc.text("Cantidad", 70, yPos);
+    doc.text("Precio", 95, yPos);
+    doc.text("Satisfacción", 120, yPos);
+    doc.text("Motivo", 150, yPos);
+    yPos += 5;
+    
+    // Línea bajo headers
+    doc.line(20, yPos, 190, yPos);
+    yPos += 5;
+    
+    // Registros (máximo 15 para evitar desbordamiento)
+    const registrosParaPDF = registros.slice(-15); // últimos 15 registros
+    
+    registrosParaPDF.forEach(r => {
+      if (yPos > 270) { // Nueva página si es necesario
+        doc.addPage();
+        yPos = 20;
+      }
+      
+      doc.text(r.fecha.slice(5), 20, yPos); // MM-DD
+      doc.text(r.tipo.slice(0, 8), 45, yPos);
+      doc.text(`${r.cantidadGramos}g`, 70, yPos);
+      doc.text(`$${r.precioTotal.toFixed(0)}`, 95, yPos);
+      doc.text(`${r.satisfaccion}/10`, 120, yPos);
+      doc.text(r.motivo.slice(0, 12), 150, yPos);
+      yPos += 7;
+    });
+    
+    // Datos sociales si existen
+    if (datosSocial.length > 0) {
+      yPos += 10;
+      if (yPos > 250) {
+        doc.addPage();
+        yPos = 20;
+      }
+      
+      doc.setFontSize(12);
+      doc.setTextColor(9, 105, 218);
+      doc.text("🤝 Desempeño Social", 20, yPos);
+      yPos += 10;
+      
+      doc.setFontSize(8);
+      doc.setTextColor(0, 0, 0);
+      
+      // Headers sociales
+      doc.text("Fecha", 20, yPos);
+      doc.text("Social", 50, yPos);
+      doc.text("Laboral", 90, yPos);
+      doc.text("Ánimo", 130, yPos);
+      yPos += 5;
+      
+      doc.line(20, yPos, 190, yPos);
+      yPos += 5;
+      
+      datosSocial.slice(-10).forEach(d => {
+        if (yPos > 270) {
+          doc.addPage();
+          yPos = 20;
+        }
+        
+        doc.text(d.fecha.slice(5), 20, yPos);
+        doc.text(d.interaccionesSociales.slice(0, 10), 50, yPos);
+        doc.text(d.desempenoLaboral.slice(0, 10), 90, yPos);
+        doc.text(d.estadoAnimo.slice(0, 10), 130, yPos);
+        yPos += 7;
+      });
+    }
+    
+    // Footer
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`© 2025 Control Cannabis Pro - ${usuarioActual}`, 105, 280, { align: "center" });
+    doc.text("Desarrollado por JJ Solutions - Tecnología e Innovación", 105, 285, { align: "center" });
+    
+    // Descargar automáticamente
+    const nombreArchivo = `Reporte_Cannabis_${usuarioActual}_${new Date().toISOString().slice(0, 10)}.pdf`;
+    doc.save(nombreArchivo);
+    
+    // Mensaje de éxito
+    if (exportMsg) {
+      exportMsg.textContent = "✅ PDF descargado correctamente.";
+      exportMsg.style.color = "var(--success-color)";
+    }
+    
+  } catch (error) {
+    console.error("Error al generar PDF:", error);
+    if (exportMsg) {
+      exportMsg.textContent = "❌ Error al generar PDF. Intenta de nuevo.";
+      exportMsg.style.color = "var(--danger-color)";
+    }
+  }
+}
+
+/* =========================
+   Theme Toggle
+   ========================= */
+function toggleTheme() {
+  const body = document.body;
+  const isLight = body.classList.contains("light-theme");
+
+  if (isLight) {
+    body.classList.remove("light-theme");
+    themeToggle.textContent = "🌙";
+    localStorage.setItem("theme", "dark");
+  } else {
+    body.classList.add("light-theme");
+    themeToggle.textContent = "☀️";
+    localStorage.setItem("theme", "light");
+  }
+
+  // Actualizar gráficos para el nuevo tema
+  setTimeout(() => {
+    resizeAllCharts();
+    inicializarGraficos();
+    inicializarGraficoSocial();
+    inicializarGraficoDashboard();
+  }, 100);
+}
+
+function aplicarTemaGuardado() {
+  const savedTheme = localStorage.getItem("theme");
+  if (savedTheme === "light") {
+    document.body.classList.add("light-theme");
+    if (themeToggle) themeToggle.textContent = "☀️";
+  } else {
+    if (themeToggle) themeToggle.textContent = "🌙";
+  }
+}
+
+/* =========================
+   Desempeño Social
+   ========================= */
+function mostrarRegistrosSociales() {
+  if (!socialRecordsList) return; // si no existe en HTML, omitir
+  const datosSocial = cargarDatosSocial();
+
+  if (datosSocial.length === 0) {
+    socialRecordsList.innerHTML = "<p>No hay registros de desempeño social.</p>";
+    return;
+  }
+
+  socialRecordsList.innerHTML = datosSocial
+    .map(
+      (d) => `
+        <div class="record-item">
+          <div><strong>Fecha:</strong> ${d.fecha}</div>
+          <div><strong>Interacciones Sociales:</strong> ${d.interaccionesSociales}</div>
+          <div><strong>Desempeño Laboral:</strong> ${d.desempenoLaboral}</div>
+          <div><strong>Estado de Ánimo:</strong> ${d.estadoAnimo}</div>
+        </div>
+      `
+    )
+    .join("");
+}
+
+function valorNumerico(valor) {
+  if (!valor) return 5;
+  valor = (valor + "").toLowerCase().trim();
+  if (["baja", "bajo", "poca", "poco", "mala", "malo", "negativo"].includes(valor)) return 3;
+  if (["media", "medio", "regular", "moderada", "moderado", "neutral"].includes(valor)) return 6;
+  if (["alta", "alto", "buena", "bueno", "excelente", "muy buena", "positivo"].includes(valor)) return 9;
+  const n = parseInt(valor, 10);
+  if (!isNaN(n)) return Math.max(0, Math.min(10, n));
+  return 5;
+}
+
+function inicializarGraficoSocial() {
+  if (chartDesempenoSocial) {
+    chartDesempenoSocial.destroy();
+    chartDesempenoSocial = null;
+  }
+
+  const datosSocial = cargarDatosSocial();
+  if (!datosSocial.length) return;
+
+  const total = datosSocial.length;
+  let sumaInteracciones = 0;
+  let sumaDesempeno = 0;
+  let sumaEstado = 0;
+
+  datosSocial.forEach((d) => {
+    sumaInteracciones += valorNumerico(d.interaccionesSociales);
+    sumaDesempeno += valorNumerico(d.desempenoLaboral);
+    sumaEstado += valorNumerico(d.estadoAnimo);
+  });
+
+  const promedioInteracciones = +(sumaInteracciones / total).toFixed(2);
+  const promedioDesempeno = +(sumaDesempeno / total).toFixed(2);
+  const promedioEstado = +(sumaEstado / total).toFixed(2);
+
+  const ctx = ctxOf("graficoSocial"); // ← coincide con tu HTML
+  if (!ctx) return;
+
+  chartDesempenoSocial = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: ["Interacciones Sociales", "Desempeño Laboral", "Estado de Ánimo"],
+      datasets: [
+        {
+          label: "Promedio",
+          data: [promedioInteracciones, promedioDesempeno, promedioEstado],
+          backgroundColor: ["#79c0ff", "#238636", "#58a6ff"],
+          borderRadius: 8,
+          borderWidth: 1,
+          borderColor: "#79c0ff",
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false, // ✅ adapta al contenedor
+      scales: {
+        y: {
+          min: 0,
+          max: 10,
+          ticks: { color: "#79c0ff", stepSize: 1 },
+          grid: { color: "#79c0ff44", borderDash: [5, 5] },
+        },
+        x: {
+          ticks: { color: "#79c0ff" },
+          grid: { display: false },
+        },
+      },
+      plugins: {
+        legend: { labels: { color: "#79c0ff" } },
+        tooltip: {
+          backgroundColor: "#79c0ffcc",
+          titleColor: "#000",
+          bodyColor: "#000",
+          cornerRadius: 6,
+          padding: 6,
+        },
+      },
+      animation: { duration: 800, easing: "easeInOutQuad" },
+    },
+  });
+}
+
+/* =========================
+   Eventos
+   ========================= */
+// Tabs navegación
+tabs.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    if (btn.disabled) return;
+    const tabId = btn.getAttribute("data-tab");
+    cambiarTab(tabId);
+  });
+});
+
+// Login
+if (loginBtn) {
+  loginBtn.addEventListener("click", () => {
+    const user = (usernameInput?.value || "").trim();
+    if (!user) {
+      if (loginMsg) loginMsg.textContent = "Por favor ingresa un nombre de usuario.";
+      return;
+    }
+    usuarioActual = user;
+    if (loginMsg) loginMsg.textContent = `¡Bienvenido, ${usuarioActual}!`;
+    localStorage.setItem("usuarioActual", usuarioActual);
+    cargarDatos();
+    activarTabs(true);
+    cambiarTab("dashboard-tab");
+    limpiarLogin();
+    actualizarUI();
+  });
+}
+
+// Logout
+if (logoutBtn) {
+  logoutBtn.addEventListener("click", () => {
+    usuarioActual = null;
+    localStorage.removeItem("usuarioActual");
+    registros = [];
+    activarTabs(false);
+    cambiarTab("login-tab");
+    if (recordsList) recordsList.innerHTML = "";
+    if (recomendacionesBox) recomendacionesBox.innerHTML = "";
+    if (loginMsg) loginMsg.textContent = "";
+    // destruir gráficos
+    [chartSatisfaccion, chartConsumoMensual, chartCostoGramo, chartMetodo, chartMotivo, chartDesempenoSocial, chartDashboard]
+      .forEach((ch) => {
+        try { if (ch) ch.destroy(); } catch (e) {}
+      });
+    chartSatisfaccion = chartConsumoMensual = chartCostoGramo = chartMetodo = chartMotivo = chartDesempenoSocial = chartDashboard = null;
+  });
+}
+
+// Agregar registro de consumo
+if (addForm) {
+  addForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (!usuarioActual) {
+      if (addMsg) addMsg.textContent = "Debes iniciar sesión primero.";
+      return;
+    }
+
+    const nuevo = {
+      fecha: document.getElementById("fecha").value,
+      tipo: document.getElementById("tipo").value.trim(),
+      proveedor: document.getElementById("proveedor").value.trim(),
+      cantidadGramos: parseFloat(document.getElementById("cantidad").value),
+      precioTotal: parseFloat(document.getElementById("precio").value),
+      motivo: document.getElementById("motivo").value.trim(),
+      metodoConsumo: document.getElementById("metodo").value.trim(),
+      satisfaccion: parseInt(document.getElementById("satisfaccion").value, 10),
+      efectosSecundarios: document.getElementById("efectos").value.trim(),
+      consciente: document.getElementById("consciente").value === "true",
+    };
+
+    registros.push(nuevo);
+    guardarDatos();
+    actualizarUI();
+
+    addForm.reset();
+    if (addMsg) addMsg.textContent = "✅ Registro agregado correctamente.";
+  });
+}
+
+// Buscar en registros
+if (searchRecordsInput) {
+  searchRecordsInput.addEventListener("input", debounce(() => mostrarRegistros(), 150));
+}
+
+// Formulario de desempeño social
+if (socialForm) {
+  socialForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+
+    if (!usuarioActual) {
+      if (socialMsg) socialMsg.textContent = "Debes iniciar sesión primero.";
+      return;
+    }
+
+    const nuevoSocial = {
+      fecha: new Date().toISOString().slice(0, 10),
+      interaccionesSociales: document.getElementById("interaccionesSociales").value,
+      desempenoLaboral: document.getElementById("desempenoLaboral").value,
+      estadoAnimo: document.getElementById("estadoAnimo").value,
+    };
+
+    const datosSocial = cargarDatosSocial();
+    datosSocial.push(nuevoSocial);
+    guardarDatosSocial(datosSocial);
+
+    if (socialMsg) socialMsg.textContent = "✅ Desempeño social registrado correctamente.";
+    socialForm.reset();
+
+    mostrarRegistrosSociales();
+    inicializarGraficoSocial();
+    setTimeout(resizeAllCharts, 50);
+  });
+}
+
+// Theme toggle
+if (themeToggle) {
+  themeToggle.addEventListener("click", toggleTheme);
+}
+
+// Export PDF event
+if (exportPDFBtn) {
+  exportPDFBtn.addEventListener("click", exportarPDF);
+}
+
+/* =========================
+   Inicialización
+   ========================= */
+window.addEventListener("load", () => {
+  aplicarTemaGuardado();
+  usuarioActual = localStorage.getItem("usuarioActual");
+  if (usuarioActual) {
+    activarTabs(true);
+    cambiarTab("dashboard-tab");
+    cargarDatos();
+    actualizarUI();
+  } else {
+    activarTabs(false);
+    cambiarTab("login-tab");
+  }
+
+  // Mostrar botón de tema siempre
+  if (themeToggle) {
+    themeToggle.hidden = false;
+  }
+});
+
+// Redimensionar gráficos al cambiar tamaño de ventana
+window.addEventListener("resize", debounce(resizeAllCharts, 100));
+
+// Observa mutaciones por si el CSS/DOM cambian tamaños de contenedor
+const ro = new ResizeObserver(debounce(() => resizeAllCharts(), 80));
+document.querySelectorAll(".chart-container").forEach((c) => ro.observe(c));
+
+/* =========================
+   Fin del archivo
+   ========================= */

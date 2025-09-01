@@ -23,7 +23,6 @@
     <button data-tab="stats-tab" disabled>Estadísticas</button>
     <button data-tab="rec-tab" disabled>Recomendaciones</button>
     <button data-tab="social-tab" disabled>Desempeño Social</button>
-    <button data-tab="premium-tab" disabled class="premium-tab">⭐ Premium</button>
     <button id="themeToggle">🌙</button>
     <button id="logoutBtn" hidden>🔒 Cerrar sesión</button>
   </div>
@@ -192,47 +191,6 @@
     <section id="rec-tab" class="tab">
       <h2>💡 Recomendaciones</h2>
       <div id="recomendacionesBox"></div>
-    </section>
-
-    <!-- Premium Features -->
-    <section id="premium-tab" class="tab">
-      <h2>⭐ Funciones Premium</h2>
-      <div class="premium-container">
-        <div class="subscription-plan">
-          <h3>🚀 Plan Premium</h3>
-          <div class="price">$9.99/mes</div>
-          <ul class="features-list">
-            <li>✅ Registros ilimitados</li>
-            <li>✅ Estadísticas avanzadas</li>
-            <li>✅ Exportar reportes PDF</li>
-            <li>✅ Análisis de tendencias</li>
-            <li>✅ Soporte prioritario</li>
-          </ul>
-          <button class="premium-btn" onclick="iniciarSuscripcion('premium')">Suscribirse Premium</button>
-        </div>
-        
-        <div class="subscription-plan featured">
-          <h3>💎 Plan Pro</h3>
-          <div class="price">$19.99/mes</div>
-          <ul class="features-list">
-            <li>✅ Todo del Plan Premium</li>
-            <li>✅ Recomendaciones con IA</li>
-            <li>✅ Análisis predictivo</li>
-            <li>✅ Alertas personalizadas</li>
-            <li>✅ API access</li>
-          </ul>
-          <button class="premium-btn pro" onclick="iniciarSuscripcion('pro')">Suscribirse Pro</button>
-        </div>
-      </div>
-      
-      <div class="payment-methods">
-        <h3>💳 Métodos de Pago</h3>
-        <div class="payment-options">
-          <button onclick="pagarConStripe()">💳 Tarjeta de Crédito</button>
-          <button onclick="pagarConPayPal()">🔵 PayPal</button>
-          <button onclick="pagarConMercadoPago()">💰 MercadoPago</button>
-        </div>
-      </div>
     </section>
 
     <!-- Desempeño Social -->
