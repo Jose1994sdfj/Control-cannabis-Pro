@@ -14,17 +14,38 @@
     <h1>Control Consumo Cannabis Pro <span class="beta-badge">BETA</span></h1>
   </header>
 
-  <!-- Barra de pestañas -->
-  <div class="tabs">
-    <button data-tab="login-tab">Iniciar Sesión</button>
-    <button data-tab="dashboard-tab" disabled>📊 Dashboard</button>
-    <button data-tab="add-tab" disabled>Agregar</button>
-    <button data-tab="view-tab" disabled>Registros</button>
-    <button data-tab="stats-tab" disabled>Estadísticas</button>
-    <button data-tab="rec-tab" disabled>Recomendaciones</button>
-    <button data-tab="social-tab" disabled>Desempeño Social</button>
-    <button id="themeToggle">🌙</button>
-    <button id="logoutBtn" hidden>🔒 Cerrar sesión</button>
+  <!-- Navegación -->
+  <div class="tabs-container">
+    <!-- Barra de pestañas normal (desktop) -->
+    <div class="tabs">
+      <button data-tab="login-tab">Iniciar Sesión</button>
+      <button data-tab="dashboard-tab" disabled>📊 Dashboard</button>
+      <button data-tab="add-tab" disabled>Agregar</button>
+      <button data-tab="view-tab" disabled>Registros</button>
+      <button data-tab="stats-tab" disabled>Estadísticas</button>
+      <button data-tab="rec-tab" disabled>Recomendaciones</button>
+      <button data-tab="social-tab" disabled>Desempeño Social</button>
+      <button id="themeToggle">🌙</button>
+      <button id="logoutBtn" hidden>🔒 Cerrar sesión</button>
+    </div>
+
+    <!-- Menú hamburguesa (móvil) -->
+    <button class="hamburger-menu" id="hamburgerBtn">
+      ☰ Menú
+    </button>
+
+    <!-- Navegación móvil -->
+    <div class="mobile-nav" id="mobileNav">
+      <button data-tab="login-tab">🔑 Iniciar Sesión</button>
+      <button data-tab="dashboard-tab" disabled>📊 Dashboard</button>
+      <button data-tab="add-tab" disabled>➕ Agregar Registro</button>
+      <button data-tab="view-tab" disabled>📋 Ver Registros</button>
+      <button data-tab="stats-tab" disabled>📈 Estadísticas</button>
+      <button data-tab="rec-tab" disabled>💡 Recomendaciones</button>
+      <button data-tab="social-tab" disabled>🤝 Desempeño Social</button>
+      <button id="themeToggleMobile">🌙 Cambiar Tema</button>
+      <button id="logoutBtnMobile" hidden>🔒 Cerrar Sesión</button>
+    </div>
   </div>
 
   <main>
@@ -196,39 +217,121 @@
     <!-- Desempeño Social -->
     <section id="social-tab" class="tab">
       <h2>🤝 Desempeño Social y Calidad de Vida</h2>
-      <p>Aquí podrás registrar y analizar cómo el consumo impacta en tu vida social, laboral y emocional.</p>
+      <p>Registra y analiza cómo el consumo impacta en diferentes aspectos de tu vida diaria.</p>
 
       <form id="socialForm">
-        <label for="interaccionesSociales">Interacciones Sociales:</label>
-        <select id="interaccionesSociales" required>
-          <option value="" disabled selected>Selecciona nivel</option>
-          <option value="Bajo">Bajo</option>
-          <option value="Moderado">Moderado</option>
-          <option value="Alto">Alto</option>
-        </select>
+        <div class="social-form-grid">
+          <div class="social-form-column">
+            <label for="interaccionesSociales">💬 Interacciones Sociales:</label>
+            <select id="interaccionesSociales" required>
+              <option value="" disabled selected>Selecciona nivel</option>
+              <option value="1">1 - Muy pocas</option>
+              <option value="2">2 - Pocas</option>
+              <option value="3">3 - Escasas</option>
+              <option value="4">4 - Limitadas</option>
+              <option value="5">5 - Normales</option>
+              <option value="6">6 - Frecuentes</option>
+              <option value="7">7 - Abundantes</option>
+              <option value="8">8 - Muy frecuentes</option>
+              <option value="9">9 - Excelentes</option>
+              <option value="10">10 - Excepcionales</option>
+            </select>
 
-        <label for="desempenoLaboral">Desempeño Laboral/Estudios:</label>
-        <select id="desempenoLaboral" required>
-          <option value="" disabled selected>Selecciona nivel</option>
-          <option value="Bajo">Bajo</option>
-          <option value="Moderado">Moderado</option>
-          <option value="Alto">Alto</option>
-        </select>
+            <label for="desempenoLaboral">💼 Productividad Laboral/Estudios:</label>
+            <select id="desempenoLaboral" required>
+              <option value="" disabled selected>Selecciona nivel</option>
+              <option value="1">1 - Muy bajo</option>
+              <option value="2">2 - Bajo</option>
+              <option value="3">3 - Por debajo del promedio</option>
+              <option value="4">4 - Ligeramente bajo</option>
+              <option value="5">5 - Promedio</option>
+              <option value="6">6 - Ligeramente alto</option>
+              <option value="7">7 - Por encima del promedio</option>
+              <option value="8">8 - Alto</option>
+              <option value="9">9 - Muy alto</option>
+              <option value="10">10 - Excepcional</option>
+            </select>
 
-        <label for="estadoAnimo">Estado de Ánimo General:</label>
-        <select id="estadoAnimo" required>
-          <option value="" disabled selected>Selecciona estado</option>
-          <option value="Negativo">Negativo</option>
-          <option value="Neutral">Neutral</option>
-          <option value="Positivo">Positivo</option>
-        </select>
+            <label for="estadoAnimo">😊 Estado de Ánimo General:</label>
+            <select id="estadoAnimo" required>
+              <option value="" disabled selected>Selecciona estado</option>
+              <option value="1">1 - Muy negativo</option>
+              <option value="2">2 - Negativo</option>
+              <option value="3">3 - Bastante negativo</option>
+              <option value="4">4 - Ligeramente negativo</option>
+              <option value="5">5 - Neutral</option>
+              <option value="6">6 - Ligeramente positivo</option>
+              <option value="7">7 - Bastante positivo</option>
+              <option value="8">8 - Positivo</option>
+              <option value="9">9 - Muy positivo</option>
+              <option value="10">10 - Excelente</option>
+            </select>
+          </div>
 
-        <button type="submit">Guardar Desempeño Social</button>
+          <div class="social-form-column">
+            <label for="calidadSueno">😴 Calidad del Sueño:</label>
+            <select id="calidadSueno" required>
+              <option value="" disabled selected>Selecciona nivel</option>
+              <option value="1">1 - Muy mala</option>
+              <option value="2">2 - Mala</option>
+              <option value="3">3 - Regular-</option>
+              <option value="4">4 - Regular</option>
+              <option value="5">5 - Aceptable</option>
+              <option value="6">6 - Buena</option>
+              <option value="7">7 - Muy buena</option>
+              <option value="8">8 - Excelente</option>
+              <option value="9">9 - Perfecta</option>
+              <option value="10">10 - Excepcional</option>
+            </select>
+
+            <label for="niveleEstres">😰 Niveles de Estrés:</label>
+            <select id="niveleEstres" required>
+              <option value="" disabled selected>Selecciona nivel</option>
+              <option value="1">1 - Sin estrés</option>
+              <option value="2">2 - Muy bajo</option>
+              <option value="3">3 - Bajo</option>
+              <option value="4">4 - Ligeramente bajo</option>
+              <option value="5">5 - Moderado</option>
+              <option value="6">6 - Ligeramente alto</option>
+              <option value="7">7 - Alto</option>
+              <option value="8">8 - Muy alto</option>
+              <option value="9">9 - Extremo</option>
+              <option value="10">10 - Insostenible</option>
+            </select>
+
+            <label for="motivacionGeneral">🎯 Motivación General:</label>
+            <select id="motivacionGeneral" required>
+              <option value="" disabled selected>Selecciona nivel</option>
+              <option value="1">1 - Sin motivación</option>
+              <option value="2">2 - Muy baja</option>
+              <option value="3">3 - Baja</option>
+              <option value="4">4 - Ligeramente baja</option>
+              <option value="5">5 - Neutra</option>
+              <option value="6">6 - Ligeramente alta</option>
+              <option value="7">7 - Alta</option>
+              <option value="8">8 - Muy alta</option>
+              <option value="9">9 - Excelente</option>
+              <option value="10">10 - Inspirado</option>
+            </select>
+          </div>
+        </div>
+
+        <label for="notasSociales">📝 Notas adicionales (opcional):</label>
+        <textarea id="notasSociales" placeholder="Comparte cualquier observación sobre tu día o cómo te sientes..."></textarea>
+
+        <button type="submit">Guardar Evaluación de Bienestar</button>
         <div id="socialMsg"></div>
       </form>
 
-      <h3>📊 Visualización de Desempeño Social</h3>
-      <div class="chart-container"><canvas id="graficoSocial"></canvas></div>
+      <div class="social-analysis">
+        <h3>📊 Análisis de Tendencias</h3>
+        <div class="chart-container"><canvas id="graficoSocialTendencia"></canvas></div>
+
+        <h3>📈 Promedios Actuales</h3>
+        <div class="chart-container"><canvas id="graficoSocial"></canvas></div>
+
+        <div id="socialInsights"></div>
+      </div>
     </section>
   </main>
 
