@@ -1,0 +1,21 @@
+{
+  "name": "Control Consumo Cannabis Pro",
+  "short_name": "Cannabis Pro",
+  "description": "Herramienta para el seguimiento y análisis del consumo de cannabis.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#161b22",
+  "icons": [
+    {
+      "src": "icon-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "icon-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}
