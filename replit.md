@@ -4,6 +4,16 @@
 
 Cannabis Consumption Tracker Pro is a Progressive Web Application (PWA) designed to help users monitor and analyze their cannabis consumption patterns. The application provides comprehensive tracking capabilities including consumption logs, statistical analysis, cost tracking, and social performance monitoring. Built as a client-side application, it offers offline functionality and data persistence through browser localStorage.
 
+## Recent Changes
+
+### September 2025 - Major UI/UX and Analytics Improvements
+- **Responsive Hamburger Menu**: Implemented complete mobile navigation with animated hamburger menu for screens ≤768px, including mobile theme toggle and logout functionality
+- **Advanced Recommendations System**: Complete overhaul from basic recommendations to comprehensive analysis including efficiency analysis, provider comparison, consumption method optimization, frequency tracking, side effects analysis, and budget optimization with color-coded visual cards
+- **Enhanced Social Performance Module**: Expanded from 3 basic metrics to 6 comprehensive dimensions (social interactions, productivity, mood, sleep quality, stress levels, motivation) using 1-10 numeric scales with intelligent insights, trend analysis, and consumption correlation detection
+- **PWA Installation Support**: Added professional cannabis-themed app icons (192x192px, 512x512px) with proper manifest configuration for home screen installation on mobile devices
+- **Advanced Data Visualization**: Implemented radar charts for social metrics overview, multi-line trend charts for temporal analysis, and enhanced chart responsiveness across all device sizes
+- **Intelligent Analytics**: Added automatic pattern detection, correlation analysis between consumption and wellbeing metrics, and personalized recommendations based on user data trends
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
