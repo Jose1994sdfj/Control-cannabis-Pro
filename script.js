@@ -81,16 +81,13 @@ let chartDashboard = null;
 // Theme toggle
 const themeToggle = document.getElementById("themeToggle");
 
+// Franja de bienestar y acceso rápido
+const wellbeingStrip = document.getElementById("wellbeingStrip");
+const fabAdd = document.getElementById("fabAdd");
+
 // Export PDF
 const exportPDFBtn = document.getElementById("exportPDFBtn");
 const exportMsg = document.getElementById("exportMsg");
-
-// Menú hamburguesa
-const hamburgerBtn = document.getElementById("hamburgerBtn");
-const mobileNav = document.getElementById("mobileNav");
-const mobileNavButtons = document.querySelectorAll(".mobile-nav button[data-tab]");
-const themeToggleMobile = document.getElementById("themeToggleMobile");
-const logoutBtnMobile = document.getElementById("logoutBtnMobile");
 
 /* =========================
    Utilidades
@@ -106,7 +103,6 @@ function ctxOf(id) {
 
 /** Activa o desactiva tabs (excepto login) y muestra/oculta logout */
 function activarTabs(estado) {
-  // Tabs desktop
   tabs.forEach((btn) => {
     if (btn.getAttribute("data-tab") !== "login-tab") btn.disabled = !estado;
   });
@@ -117,53 +113,31 @@ function activarTabs(estado) {
   if (themeToggle) {
     themeToggle.hidden = false;
   }
-
-  // Tabs móvil
-  mobileNavButtons.forEach((btn) => {
-    if (btn.getAttribute("data-tab") !== "login-tab") btn.disabled = !estado;
-  });
-  if (logoutBtnMobile) {
-    logoutBtnMobile.hidden = !estado;
+  // El botón flotante de acceso rápido solo tiene sentido con sesión iniciada
+  if (fabAdd && !estado) {
+    fabAdd.hidden = true;
   }
 }
 
 /** Cambia la pestaña visible y dispara resize de gráficos si corresponde */
 function cambiarTab(tabId) {
-  // Activar botón correcto en desktop
   tabs.forEach((b) => b.classList.remove("active"));
   sections.forEach((s) => s.classList.remove("active"));
 
   const btn = Array.from(tabs).find((b) => b.getAttribute("data-tab") === tabId);
   if (btn) btn.classList.add("active");
 
-  // Activar botón correcto en móvil
-  mobileNavButtons.forEach((b) => b.classList.remove("active"));
-  const mobileBtn = Array.from(mobileNavButtons).find((b) => b.getAttribute("data-tab") === tabId);
-  if (mobileBtn) mobileBtn.classList.add("active");
-
   const sec = Array.from(sections).find((s) => s.id === tabId);
   if (sec) sec.classList.add("active");
 
-  // Cerrar menú móvil al cambiar tab
-  cerrarMenuMovil();
+  // El FAB de "Agregar" se oculta en login y en la propia pestaña de agregar
+  if (fabAdd) {
+    fabAdd.hidden = !usuarioActual || tabId === "login-tab" || tabId === "add-tab";
+  }
 
   // Al mostrar una sección con gráficos, forzamos resize después del reflow
   if (tabId === "stats-tab" || tabId === "social-tab" || tabId === "dashboard-tab") {
     setTimeout(resizeAllCharts, 50);
-  }
-}
-
-/** Alterna la visibilidad del menú hamburguesa */
-function toggleMenuMovil() {
-  if (mobileNav) {
-    mobileNav.classList.toggle("show");
-  }
-}
-
-/** Cierra el menú móvil */
-function cerrarMenuMovil() {
-  if (mobileNav) {
-    mobileNav.classList.remove("show");
   }
 }
 
@@ -292,6 +266,41 @@ function actualizarUI() {
   inicializarGraficoSocialTendencia();
   mostrarSocialInsights();
   inicializarGraficoDashboard();
+  actualizarFranjaBienestar();
+}
+
+/**
+ * Colorea la franja ambiental bajo el encabezado según el promedio de
+ * ánimo/estrés de tus últimas evaluaciones de bienestar. Es puramente
+ * informativo: musgo cuando el balance reciente es bueno, arcilla cuando
+ * conviene prestarle atención. Si no hay datos, se queda neutral.
+ */
+function actualizarFranjaBienestar() {
+  if (!wellbeingStrip) return;
+
+  const datosSocial = cargarDatosSocial();
+  if (!datosSocial || datosSocial.length === 0) {
+    wellbeingStrip.style.background =
+      "linear-gradient(90deg, var(--border-color), var(--border-color))";
+    return;
+  }
+
+  const recientes = datosSocial.slice(-5);
+  const promedio = (campo, invertir = false) => {
+    const vals = recientes.map((d) => Number(d[campo]) || 5);
+    const media = vals.reduce((a, b) => a + b, 0) / vals.length;
+    return invertir ? 11 - media : media;
+  };
+
+  // Balance de bienestar 1-10: ánimo y sueño suman, estrés resta (invertido)
+  const balance =
+    (promedio("estadoAnimo") + promedio("calidadSueno") + promedio("niveleEstres", true)) / 3;
+
+  // Interpola entre arcilla (bajo) y musgo (alto)
+  const t = Math.max(0, Math.min(1, (balance - 3) / 6));
+  const colorBajo = "#c98a4b";
+  const colorAlto = "#8fae72";
+  wellbeingStrip.style.background = `linear-gradient(90deg, ${colorBajo}, ${colorAlto} ${Math.round(t * 100)}%)`;
 }
 
 /** Actualiza las métricas del dashboard */
@@ -2106,38 +2115,10 @@ if (themeToggle) {
   themeToggle.addEventListener("click", toggleTheme);
 }
 
-// Theme toggle móvil
-if (themeToggleMobile) {
-  themeToggleMobile.addEventListener("click", toggleTheme);
+// Botón flotante de acceso rápido a "Agregar registro"
+if (fabAdd) {
+  fabAdd.addEventListener("click", () => cambiarTab("add-tab"));
 }
-
-// Menú hamburguesa
-if (hamburgerBtn) {
-  hamburgerBtn.addEventListener("click", toggleMenuMovil);
-}
-
-// Navegación móvil
-mobileNavButtons.forEach((btn) => {
-  btn.addEventListener("click", () => {
-    if (btn.disabled) return;
-    const tabId = btn.getAttribute("data-tab");
-    cambiarTab(tabId);
-  });
-});
-
-// Logout móvil
-if (logoutBtnMobile) {
-  logoutBtnMobile.addEventListener("click", () => {
-    auth.signOut();
-  });
-}
-
-// Cerrar menú móvil al hacer clic fuera
-document.addEventListener("click", (e) => {
-  if (mobileNav && !mobileNav.contains(e.target) && !hamburgerBtn.contains(e.target)) {
-    cerrarMenuMovil();
-  }
-});
 
 // Export PDF event
 if (exportPDFBtn) {
