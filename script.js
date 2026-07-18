@@ -1,15 +1,15 @@
 // ============================================================
-//  app.js - Weigh & Flow Engine v2.0
-//  Cálculo de peso por relación de área (moneda como referencia)
+//  app.js - Weigh & Flow Engine v2.1 (con timeout de seguridad)
 // ============================================================
 
 (() => {
     'use strict';
 
     // --- CONSTANTES ---
-    const COIN_DIAMETER_MM = 23.25;   // 1€ / 1$ ≈ 23.25mm
+    const COIN_DIAMETER_MM = 23.25;
     const COIN_AREA_MM2 = Math.PI * (COIN_DIAMETER_MM / 2) ** 2;
-    const DENSITY_CANNABIS_G_MM2 = 0.0012; // factor empírico (flor seca)
+    const DENSITY_CANNABIS_G_MM2 = 0.0012;
+    const CAMERA_TIMEOUT = 4000; // 4 segundos máximo
 
     // --- ESTADO GLOBAL ---
     const state = {
@@ -19,7 +19,9 @@
         currentWeight: 0,
         currentArea: 0,
         currentConfidence: 0,
-        filter: 'all'
+        filter: 'all',
+        cameraReady: false,
+        isDemo: false
     };
 
     // --- DOM REFS ---
@@ -47,46 +49,97 @@
     const dailyTip = $('#dailyTip');
     const splash = $('#splash-overlay');
     const loaderFill = $('#loaderFill');
+    const splashStatus = $('#splashStatus');
+    const skipBtn = $('#skipCameraBtn');
+
+    let cameraStream = null;
+    let splashHidden = false;
 
     // --- INICIALIZACIÓN ---
     async function init() {
-        // Splash
-        let progress = 0;
-        const interval = setInterval(() => {
-            progress += Math.random() * 15 + 5;
-            if (progress > 100) progress = 100;
-            loaderFill.style.width = progress + '%';
-            if (progress >= 100) {
-                clearInterval(interval);
-                setTimeout(() => splash.classList.add('hidden'), 400);
-            }
-        }, 200);
-
         // Cargar datos guardados
         loadFromStorage();
 
-        // Cámara
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'environment', width: { ideal: 640 } }
-            });
-            video.srcObject = stream;
-            await video.play();
-            resizeCanvas();
-        } catch (e) {
-            console.warn('Cámara no disponible:', e);
-            // Fallback: modo demo (círculo simulado)
-            demoMode();
-        }
-
-        // Eventos
-        bindEvents();
+        // Actualizar UI con datos guardados
         updateUI();
         updateGreeting();
         setDailyTip();
 
-        // Limpiar canvas en cada frame
+        // Iniciar splash y cámara con timeout
+        startSplash();
+
+        try {
+            await Promise.race([
+                initCamera(),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('TIMEOUT')), CAMERA_TIMEOUT)
+                )
+            ]);
+            // Si llegamos aquí, la cámara funciona
+            state.cameraReady = true;
+            splashStatus.textContent = '✅ Cámara lista';
+            await sleep(400);
+            hideSplash();
+        } catch (err) {
+            console.warn('Cámara no disponible:', err.message);
+            splashStatus.textContent = '⚠️ Sin acceso a cámara';
+            skipBtn.classList.add('visible');
+            // Esperamos a que el usuario decida, pero no bloqueamos
+            // La app ya está funcional con datos guardados
+        }
+
+        // Eventos
+        bindEvents();
         requestAnimationFrame(drawOverlay);
+    }
+
+    function startSplash() {
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += Math.random() * 8 + 3;
+            if (progress > 100) progress = 100;
+            loaderFill.style.width = progress + '%';
+            if (progress >= 100 && state.cameraReady) {
+                clearInterval(interval);
+                if (!splashHidden) hideSplash();
+            }
+        }, 150);
+        // Si pasa el timeout, el loader se llena igual
+        setTimeout(() => {
+            clearInterval(interval);
+            if (loaderFill.style.width !== '100%') {
+                loaderFill.style.width = '100%';
+            }
+        }, CAMERA_TIMEOUT + 500);
+    }
+
+    function hideSplash() {
+        if (splashHidden) return;
+        splashHidden = true;
+        splash.classList.add('hidden');
+    }
+
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    // --- INICIALIZAR CÁMARA ---
+    async function initCamera() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { 
+                    facingMode: 'environment', 
+                    width: { ideal: 640 },
+                    height: { ideal: 480 }
+                }
+            });
+            cameraStream = stream;
+            video.srcObject = stream;
+            await video.play();
+            resizeCanvas();
+            state.cameraReady = true;
+            return true;
+        } catch (e) {
+            throw new Error('Camera access denied');
+        }
     }
 
     function resizeCanvas() {
@@ -95,122 +148,141 @@
         overlayCanvas.height = rect.height || 480;
     }
 
-    // --- DEMO MODE (sin cámara real) ---
-    function demoMode() {
-        // Muestra un círculo simulado para pruebas
+    // --- MODO DEMO ---
+    function enableDemoMode() {
+        state.isDemo = true;
+        splashStatus.textContent = '🔄 Modo demostración activo';
+        skipBtn.classList.remove('visible');
+        
+        // Modificar la guía visual
         const guideBox = document.querySelector('.guide-box');
         if (guideBox) {
             guideBox.innerHTML = `
-                <span style="font-size:40px;">📱</span>
-                <span style="font-size:12px;color:var(--text-secondary);margin-top:8px;">
-                    Modo demo: haz clic en capturar<br>para simular un peso de 1.2g
+                <span style="font-size:40px;">🧪</span>
+                <span style="font-size:13px;color:var(--text-secondary);margin-top:8px;">
+                    Modo Demo activo<br>
+                    <span style="font-size:11px;">Haz clic en capturar para simular un peso</span>
                 </span>
             `;
         }
-        // Override captura
-        captureBtn.addEventListener('click', () => {
-            simulateWeight(1.2 + Math.random() * 1.5);
-        });
-    }
 
-    function simulateWeight(grams) {
-        const area = grams / DENSITY_CANNABIS_G_MM2;
-        showResult(grams, area, 78);
+        // Ocultar splash después de 1s
+        setTimeout(() => {
+            if (!splashHidden) hideSplash();
+        }, 1000);
     }
 
     // --- LÓGICA DE PESO POR VISIÓN ---
     function captureAndWeigh() {
+        if (state.isDemo) {
+            const grams = 0.8 + Math.random() * 2.2;
+            const area = grams / DENSITY_CANNABIS_G_MM2;
+            showResult(grams, area, Math.round(65 + Math.random() * 30));
+            return;
+        }
+
+        if (!state.cameraReady || !video.srcObject) {
+            alert('📷 La cámara no está disponible. Usa el modo demo.');
+            return;
+        }
+
         resizeCanvas();
         ctx.drawImage(video, 0, 0, overlayCanvas.width, overlayCanvas.height);
         const imageData = ctx.getImageData(0, 0, overlayCanvas.width, overlayCanvas.height);
         const data = imageData.data;
 
-        // 1. Detectar la moneda (por color dorado/plateado + forma circular)
+        // 1. Detectar moneda
         const coinCenter = findCoin(data, overlayCanvas.width, overlayCanvas.height);
         if (!coinCenter) {
-            // Fallback: estimación por área verde
             const greenPixels = countGreenPixels(data);
             if (greenPixels > 500) {
                 const approxArea = greenPixels * 0.02;
                 const grams = approxArea * DENSITY_CANNABIS_G_MM2;
-                showResult(Math.max(0.3, grams), approxArea, 55);
-            } else {
-                alert('🔍 No se detectó una moneda de referencia. Coloca una moneda de 1€/1$ junto al cogollo.');
+                showResult(Math.max(0.3, grams), approxArea, 50);
+                return;
             }
+            alert('🔍 No se detectó una moneda de referencia. Coloca una moneda de 1€/1$ junto al cogollo.');
             return;
         }
 
-        // 2. Detectar cogollo (por color verde/café + textura)
+        // 2. Detectar cogollo
         const budArea = findBudArea(data, overlayCanvas.width, overlayCanvas.height, coinCenter);
         if (!budArea || budArea < 100) {
             alert('🌿 No se detectó el cogollo. Asegúrate de que esté junto a la moneda.');
             return;
         }
 
-        // 3. Calcular peso por relación de áreas
+        // 3. Calcular peso
         const coinRadiusPx = coinCenter.radius;
         const coinAreaPx = Math.PI * coinRadiusPx * coinRadiusPx;
         const ratio = budArea / coinAreaPx;
         const estimatedGrams = ratio * (COIN_AREA_MM2 * DENSITY_CANNABIS_G_MM2);
 
-        // 4. Confianza basada en contraste y forma
-        const confidence = Math.min(95, 60 + (ratio * 10));
-        showResult(estimatedGrams, budArea, Math.round(confidence));
+        const confidence = Math.min(92, 55 + (ratio * 12));
+        showResult(Math.max(0.2, estimatedGrams), budArea, Math.round(confidence));
     }
 
-    // --- DETECTOR DE MONEDA (color + círculo) ---
+    // --- DETECTOR DE MONEDA ---
     function findCoin(data, w, h) {
-        // Versión simplificada: busca el píxel más brillante (moneda reflectante)
         let maxBrightness = 0;
         let cx = w/2, cy = h/2;
-        for (let y = 0; y < h; y += 4) {
-            for (let x = 0; x < w; x += 4) {
+        let found = false;
+        for (let y = 20; y < h - 20; y += 4) {
+            for (let x = 20; x < w - 20; x += 4) {
                 const idx = (y * w + x) * 4;
                 const r = data[idx], g = data[idx+1], b = data[idx+2];
                 const brightness = (r + g + b) / 3;
-                if (brightness > maxBrightness && brightness > 120) {
+                if (brightness > maxBrightness && brightness > 100) {
                     maxBrightness = brightness;
                     cx = x; cy = y;
+                    found = true;
                 }
             }
         }
-        // Buscar radio aproximado (detección de bordes simplificada)
-        let radius = 30;
+        if (!found) return null;
+
+        let radius = 25;
         for (let r = 10; r < 80; r++) {
-            const idx1 = ((Math.round(cy + r) * w) + Math.round(cx)) * 4;
-            const idx2 = ((Math.round(cy - r) * w) + Math.round(cx)) * 4;
-            if (data[idx1] < 50 || data[idx2] < 50) { radius = r; break; }
+            const x1 = Math.min(w-1, Math.round(cx + r));
+            const x2 = Math.max(0, Math.round(cx - r));
+            const y1 = Math.min(h-1, Math.round(cy + r));
+            const y2 = Math.max(0, Math.round(cy - r));
+            const idx1 = (y1 * w + x1) * 4;
+            const idx2 = (y2 * w + x2) * 4;
+            if ((data[idx1] < 60 || data[idx2] < 60) && r > 15) {
+                radius = r;
+                break;
+            }
         }
-        return { x: cx, y: cy, radius: Math.min(radius, 70) };
+        return { x: cx, y: cy, radius: Math.min(Math.max(radius, 18), 75) };
     }
 
-    // --- DETECTOR DE COGOLLO (píxeles verdes/cafés) ---
+    // --- DETECTOR DE PÍXELES VERDES ---
     function countGreenPixels(data) {
         let count = 0;
-        for (let i = 0; i < data.length; i += 16) {
+        for (let i = 0; i < data.length; i += 12) {
             const r = data[i], g = data[i+1], b = data[i+2];
-            if (g > r && g > b && g > 50 && r < 180) count++;
-            else if (r > 100 && g > 80 && b < 100) count++; // tonos marrones
+            if (g > r && g > b && g > 40 && r < 180) count++;
+            else if (r > 90 && g > 70 && b < 100 && r < 180) count++;
         }
         return count;
     }
 
     function findBudArea(data, w, h, coin) {
-        // Busca en un radio alrededor de la moneda (pero sin incluirla)
         let greenCount = 0;
-        const minX = Math.max(0, coin.x - 200);
-        const maxX = Math.min(w, coin.x + 200);
-        const minY = Math.max(0, coin.y - 200);
-        const maxY = Math.min(h, coin.y + 200);
+        const minX = Math.max(20, coin.x - 220);
+        const maxX = Math.min(w - 20, coin.x + 220);
+        const minY = Math.max(20, coin.y - 220);
+        const maxY = Math.min(h - 20, coin.y + 220);
 
         for (let y = minY; y < maxY; y += 3) {
             for (let x = minX; x < maxX; x += 3) {
                 const dist = Math.hypot(x - coin.x, y - coin.y);
-                if (dist < coin.radius * 1.2) continue; // excluir moneda
+                if (dist < coin.radius * 1.3) continue;
                 const idx = (y * w + x) * 4;
                 const r = data[idx], g = data[idx+1], b = data[idx+2];
-                if (g > r && g > b && g > 40 && r < 160) greenCount++;
-                else if (r > 90 && g > 70 && b < 90) greenCount++;
+                if (g > r && g > b && g > 35 && r < 170) greenCount++;
+                else if (r > 85 && g > 65 && b < 95 && r < 180) greenCount++;
             }
         }
         return greenCount;
@@ -226,8 +298,7 @@
         areaDisplay.textContent = state.currentArea + ' px²';
         confidenceDisplay.textContent = state.currentConfidence + '%';
 
-        // Color según precisión
-        if (state.currentConfidence > 80) {
+        if (state.currentConfidence > 75) {
             weightDisplay.style.color = '#4ade80';
         } else if (state.currentConfidence > 50) {
             weightDisplay.style.color = '#fbbf24';
@@ -249,17 +320,14 @@
             confidence: state.currentConfidence,
             strain: strain,
             type: 'flor',
-            timestamp: new Date().toISOString(),
-            effects: [] // se puede expandir
+            timestamp: new Date().toISOString()
         };
         state.sessions.unshift(session);
         saveToStorage();
         updateUI();
         resultPanel.classList.add('hidden');
         strainInput.value = '';
-        // Feedback háptico (vibración)
         if (navigator.vibrate) navigator.vibrate(20);
-        // Animación de confirmación
         const btn = saveBtn;
         btn.textContent = '✅ Guardado!';
         setTimeout(() => btn.textContent = '✅ Guardar sesión', 1500);
@@ -284,14 +352,12 @@
 
     // --- UI UPDATE ---
     function updateUI() {
-        // Home stats
         const today = new Date().toDateString();
         const todaySessionsArr = state.sessions.filter(s => new Date(s.timestamp).toDateString() === today);
         todaySessions.textContent = todaySessionsArr.length;
         const totalGrams = todaySessionsArr.reduce((acc, s) => acc + s.weight, 0);
         todayGrams.textContent = totalGrams.toFixed(1);
 
-        // Últimas sesiones (home)
         const recent = state.sessions.slice(0, 3);
         if (recent.length === 0) {
             recentList.innerHTML = `<div class="empty-state">Aún no hay sesiones. ¡Escanea tu primer cogollo!</div>`;
@@ -313,10 +379,7 @@
             `).join('');
         }
 
-        // Journal (con filtro)
         renderJournal();
-
-        // Tolerancia
         toleranceLevel.textContent = state.tolerance.charAt(0).toUpperCase() + state.tolerance.slice(1);
     }
 
@@ -372,16 +435,14 @@
         return div.innerHTML;
     }
 
-    // --- DRAW OVERLAY (para guía visual) ---
+    // --- DRAW OVERLAY ---
     function drawOverlay() {
-        if (video.readyState < 2) {
+        if (video.readyState < 2 && !state.isDemo) {
             requestAnimationFrame(drawOverlay);
             return;
         }
-        // Limpiar
         ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-        // Dibujar guía de moneda (si no hay resultado)
-        if (resultPanel.classList.contains('hidden')) {
+        if (resultPanel.classList.contains('hidden') && !state.isDemo) {
             const cx = overlayCanvas.width / 2;
             const cy = overlayCanvas.height / 2 - 20;
             ctx.beginPath();
@@ -411,7 +472,6 @@
                 $$('.tab-panel').forEach(p => p.classList.remove('active'));
                 const target = document.getElementById(btn.dataset.tab);
                 if (target) target.classList.add('active');
-                // Reajustar canvas al cambiar
                 if (btn.dataset.tab === 'tab-scan') {
                     setTimeout(resizeCanvas, 300);
                 }
@@ -430,7 +490,7 @@
             state.currentWeight = 0;
         });
 
-        // Filtros journal
+        // Filtros
         $$('.filter-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 $$('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -474,6 +534,9 @@
         $('#viewAllBtn').addEventListener('click', () => {
             document.querySelector('[data-tab="tab-journal"]').click();
         });
+
+        // BOTÓN SKIP (modo demo)
+        skipBtn.addEventListener('click', enableDemoMode);
     }
 
     // --- INICIO ---
