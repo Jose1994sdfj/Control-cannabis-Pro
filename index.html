@@ -3,102 +3,98 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Bitácora Cannabis</title>
+  <title>Bitácora · Control Consumo Cannabis Pro</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#141712" />
+  <meta name="theme-color" content="#1b241a" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192x192.png" />
   <link rel="apple-touch-icon" href="icon-192x192.png" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <!-- Firebase (Auth + Realtime Database) -->
-  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
 </head>
 <body>
   <header>
-    <div class="header-row">
-      <h1>🌿 Bitácora Cannabis <span class="beta-badge">BETA</span></h1>
-      <div class="session-cluster">
-        <button id="themeToggle" aria-label="Cambiar tema">🌙</button>
-        <button id="logoutBtn" hidden aria-label="Cerrar sesión">Salir</button>
-      </div>
-    </div>
-    <!-- Franja de bienestar: su tono ambiental refleja tu promedio reciente de ánimo/estrés -->
-    <div id="wellbeingStrip" class="wellbeing-strip" aria-hidden="true"></div>
+    <h1>Bitácora Cannabis <span class="beta-badge">Beta</span></h1>
   </header>
 
-  <!-- Navegación: una sola barra, con scroll horizontal en pantallas angostas -->
-  <nav class="tabs" id="tabsNav">
-    <button data-tab="login-tab" class="active">🔑 <span>Iniciar sesión</span></button>
-    <button data-tab="dashboard-tab" disabled>📊 <span>Dashboard</span></button>
-    <button data-tab="add-tab" disabled>➕ <span>Agregar</span></button>
-    <button data-tab="view-tab" disabled>📋 <span>Registros</span></button>
-    <button data-tab="stats-tab" disabled>📈 <span>Estadísticas</span></button>
-    <button data-tab="rec-tab" disabled>💡 <span>Recomendaciones</span></button>
-    <button data-tab="social-tab" disabled>🤝 <span>Bienestar</span></button>
-  </nav>
+  <!-- Navegación -->
+  <div class="tabs-container">
+    <!-- Barra de pestañas normal (desktop) -->
+    <div class="tabs">
+      <button data-tab="login-tab">Iniciar sesión</button>
+      <button data-tab="dashboard-tab" disabled>📊 Dashboard</button>
+      <button data-tab="add-tab" disabled>Agregar</button>
+      <button data-tab="view-tab" disabled>Registros</button>
+      <button data-tab="stats-tab" disabled>Estadísticas</button>
+      <button data-tab="rec-tab" disabled>Recomendaciones</button>
+      <button data-tab="social-tab" disabled>Desempeño social</button>
+      <button id="themeToggle">🌙</button>
+      <button id="logoutBtn" hidden>🔒 Cerrar sesión</button>
+    </div>
 
-  <!-- Acceso rápido flotante para agregar un registro desde cualquier pestaña -->
-  <button id="fabAdd" class="fab-add" hidden aria-label="Agregar registro">➕</button>
+    <!-- Menú hamburguesa (móvil) -->
+    <button class="hamburger-menu" id="hamburgerBtn">
+      ☰ Menú
+    </button>
+
+    <!-- Navegación móvil -->
+    <div class="mobile-nav" id="mobileNav">
+      <button data-tab="login-tab">🔑 Iniciar sesión</button>
+      <button data-tab="dashboard-tab" disabled>📊 Dashboard</button>
+      <button data-tab="add-tab" disabled>➕ Agregar registro</button>
+      <button data-tab="view-tab" disabled>📋 Ver registros</button>
+      <button data-tab="stats-tab" disabled>📈 Estadísticas</button>
+      <button data-tab="rec-tab" disabled>💡 Recomendaciones</button>
+      <button data-tab="social-tab" disabled>🤝 Desempeño social</button>
+      <button id="themeToggleMobile">🌙 Cambiar tema</button>
+      <button id="logoutBtnMobile" hidden>🔒 Cerrar sesión</button>
+    </div>
+  </div>
 
   <main>
     <!-- Iniciar sesión -->
     <section id="login-tab" class="tab active">
-      <div class="login-intro">
-        <h2>Tu bitácora personal</h2>
-        <p>Registra, entiende tus patrones y ve cómo te sientes con el tiempo. Solo tú puedes ver tus datos.</p>
-      </div>
-      <form id="loginForm">
-        <label for="emailInput">Correo electrónico</label>
-        <input type="email" id="emailInput" autocomplete="email" required />
-
-        <label for="passwordInput">Contraseña</label>
-        <input type="password" id="passwordInput" autocomplete="current-password" minlength="6" required />
-
-        <div class="auth-buttons">
-          <button type="submit" id="loginBtn">Entrar</button>
-          <button type="button" id="registerBtn">Crear cuenta</button>
-        </div>
+      <form>
+        <label for="usernameInput">Nombre de usuario</label>
+        <input type="text" id="usernameInput" placeholder="¿Cómo te llamas?" />
+        <button type="button" id="loginBtn">Entrar</button>
         <div id="loginMsg"></div>
       </form>
-      <p class="login-privacy">🔒 Tus registros se guardan en tu cuenta y no se comparten con nadie.</p>
     </section>
 
     <!-- Dashboard -->
     <section id="dashboard-tab" class="tab">
-      <h2>📊 Dashboard - Resumen Ejecutivo</h2>
+      <h2>Resumen</h2>
 
       <div class="dashboard-grid">
-        <!-- Tarjetas de métricas: el bienestar va primero, no el gasto -->
+        <!-- Tarjetas de métricas -->
         <div class="metric-card">
-          <h3>Satisfacción Promedio</h3>
-          <div class="metric-value" id="satisfaccionPromedio">0/10</div>
-        </div>
-
-        <div class="metric-card">
-          <h3>Total Registros</h3>
+          <h3>Registros totales</h3>
           <div class="metric-value" id="totalRegistros">0</div>
         </div>
 
         <div class="metric-card">
-          <h3>Consumo Total</h3>
+          <h3>Gasto total</h3>
+          <div class="metric-value" id="gastoTotal">$0</div>
+        </div>
+
+        <div class="metric-card">
+          <h3>Consumo total</h3>
           <div class="metric-value" id="consumoTotal">0g</div>
         </div>
 
         <div class="metric-card">
-          <h3>Gasto Total</h3>
-          <div class="metric-value" id="gastoTotal">$0</div>
+          <h3>Satisfacción promedio</h3>
+          <div class="metric-value" id="satisfaccionPromedio">0/10</div>
         </div>
       </div>
 
       <!-- Gráfico resumen en dashboard -->
       <div class="dashboard-chart">
-        <h3>📈 Tendencia Últimos 30 días</h3>
+        <h3>Tendencia · últimos 30 días</h3>
         <div class="chart-container">
           <canvas id="graficoDashboard"></canvas>
         </div>
@@ -106,9 +102,9 @@
 
       <!-- Exportar datos -->
       <div class="data-management">
-        <h3>💾 Gestión de Datos</h3>
+        <h3>Gestión de datos</h3>
         <div class="export-import-buttons">
-          <button id="exportPDFBtn" class="export-btn">📄 Exportar Reporte PDF</button>
+          <button id="exportPDFBtn" class="export-btn">📄 Exportar reporte PDF</button>
         </div>
         <div id="exportMsg"></div>
       </div>
@@ -117,10 +113,10 @@
     <!-- Agregar registro -->
     <section id="add-tab" class="tab">
       <form id="addForm">
-        <label for="fecha">Fecha:</label>
+        <label for="fecha">Fecha</label>
         <input type="date" id="fecha" required />
 
-        <label for="tipo">Tipo:</label>
+        <label for="tipo">Tipo</label>
         <select id="tipo" required>
           <option value="" disabled selected>Selecciona tipo</option>
           <option value="Índica">Índica</option>
@@ -129,7 +125,7 @@
           <option value="CBD dominante">CBD dominante</option>
         </select>
 
-        <label for="proveedor">Proveedor:</label>
+        <label for="proveedor">Proveedor</label>
         <select id="proveedor" required>
           <option value="" disabled selected>Selecciona proveedor</option>
           <option value="Proveedor A">Proveedor A</option>
@@ -138,13 +134,13 @@
           <option value="Proveedor D">Proveedor D</option>
         </select>
 
-        <label for="cantidad">Cantidad (g):</label>
-        <input type="number" id="cantidad" placeholder="Cantidad (g)" min="0" step="0.1" required />
+        <label for="cantidad">Cantidad (g)</label>
+        <input type="number" id="cantidad" placeholder="Cantidad en gramos" min="0" step="0.1" required />
 
-        <label for="precio">Precio total ($):</label>
-        <input type="number" id="precio" placeholder="Precio total ($)" min="0" step="0.01" required />
+        <label for="precio">Precio total ($)</label>
+        <input type="number" id="precio" placeholder="Precio total" min="0" step="0.01" required />
 
-        <label for="motivo">Motivo:</label>
+        <label for="motivo">Motivo</label>
         <select id="motivo" required>
           <option value="" disabled selected>Selecciona motivo</option>
           <option value="Relajación">Relajación</option>
@@ -155,7 +151,7 @@
           <option value="Ansiedad">Ansiedad</option>
         </select>
 
-        <label for="metodo">Método de consumo:</label>
+        <label for="metodo">Método de consumo</label>
         <select id="metodo" required>
           <option value="" disabled selected>Selecciona método</option>
           <option value="Fumar">Fumar</option>
@@ -165,7 +161,7 @@
           <option value="Tópicos">Tópicos</option>
         </select>
 
-        <label for="satisfaccion">Satisfacción (1-10):</label>
+        <label for="satisfaccion">Satisfacción (1-10)</label>
         <select id="satisfaccion" required>
           <option value="" disabled selected>Selecciona nivel</option>
           <option value="1">1</option>
@@ -180,16 +176,16 @@
           <option value="10">10</option>
         </select>
 
-        <label for="efectos">Efectos secundarios:</label>
-        <input type="text" id="efectos" placeholder="Efectos secundarios" />
+        <label for="efectos">Efectos secundarios</label>
+        <input type="text" id="efectos" placeholder="Ej. sequedad, sueño, apetito..." />
 
-        <label for="consciente">Consciente:</label>
+        <label for="consciente">Consciente</label>
         <select id="consciente">
           <option value="true">Consciente</option>
           <option value="false">No consciente</option>
         </select>
 
-        <button type="submit">Guardar Registro</button>
+        <button type="submit">Guardar registro</button>
         <div id="addMsg"></div>
       </form>
     </section>
@@ -202,37 +198,37 @@
 
     <!-- Estadísticas -->
     <section id="stats-tab" class="tab">
-      <h2>📈 Satisfacción mensual</h2>
+      <h2>Satisfacción mensual</h2>
       <div class="chart-container"><canvas id="graficoSatisfaccion"></canvas></div>
 
-      <h2>🔥 Consumo mensual (gramos)</h2>
+      <h2>Consumo mensual (gramos)</h2>
       <div class="chart-container"><canvas id="graficoConsumoMensual"></canvas></div>
 
-      <h2>📊 Costo promedio por gramo</h2>
+      <h2>Costo promedio por gramo</h2>
       <div class="chart-container"><canvas id="graficoCostoGramo"></canvas></div>
 
-      <h2>🧪 Frecuencia por método</h2>
+      <h2>Frecuencia por método</h2>
       <div class="chart-container"><canvas id="graficoMetodo"></canvas></div>
 
-      <h2>🧠 Motivo vs. Satisfacción</h2>
+      <h2>Motivo vs. satisfacción</h2>
       <div class="chart-container"><canvas id="graficoMotivo"></canvas></div>
     </section>
 
     <!-- Recomendaciones -->
     <section id="rec-tab" class="tab">
-      <h2>💡 Recomendaciones</h2>
+      <h2>Recomendaciones</h2>
       <div id="recomendacionesBox"></div>
     </section>
 
     <!-- Desempeño Social -->
     <section id="social-tab" class="tab">
-      <h2>🤝 Desempeño Social y Calidad de Vida</h2>
-      <p>Registra y analiza cómo el consumo impacta en diferentes aspectos de tu vida diaria.</p>
+      <h2>Bienestar y vida diaria</h2>
+      <p>Registra y analiza cómo el consumo impacta en diferentes aspectos de tu día a día.</p>
 
       <form id="socialForm">
         <div class="social-form-grid">
           <div class="social-form-column">
-            <label for="interaccionesSociales">💬 Interacciones Sociales:</label>
+            <label for="interaccionesSociales">💬 Interacciones sociales</label>
             <select id="interaccionesSociales" required>
               <option value="" disabled selected>Selecciona nivel</option>
               <option value="1">1 - Muy pocas</option>
@@ -247,7 +243,7 @@
               <option value="10">10 - Excepcionales</option>
             </select>
 
-            <label for="desempenoLaboral">💼 Productividad Laboral/Estudios:</label>
+            <label for="desempenoLaboral">💼 Productividad laboral/estudios</label>
             <select id="desempenoLaboral" required>
               <option value="" disabled selected>Selecciona nivel</option>
               <option value="1">1 - Muy bajo</option>
@@ -262,7 +258,7 @@
               <option value="10">10 - Excepcional</option>
             </select>
 
-            <label for="estadoAnimo">😊 Estado de Ánimo General:</label>
+            <label for="estadoAnimo">😊 Estado de ánimo general</label>
             <select id="estadoAnimo" required>
               <option value="" disabled selected>Selecciona estado</option>
               <option value="1">1 - Muy negativo</option>
@@ -279,7 +275,7 @@
           </div>
 
           <div class="social-form-column">
-            <label for="calidadSueno">😴 Calidad del Sueño:</label>
+            <label for="calidadSueno">😴 Calidad del sueño</label>
             <select id="calidadSueno" required>
               <option value="" disabled selected>Selecciona nivel</option>
               <option value="1">1 - Muy mala</option>
@@ -294,7 +290,7 @@
               <option value="10">10 - Excepcional</option>
             </select>
 
-            <label for="niveleEstres">😰 Niveles de Estrés:</label>
+            <label for="niveleEstres">😰 Niveles de estrés</label>
             <select id="niveleEstres" required>
               <option value="" disabled selected>Selecciona nivel</option>
               <option value="1">1 - Sin estrés</option>
@@ -309,7 +305,7 @@
               <option value="10">10 - Insostenible</option>
             </select>
 
-            <label for="motivacionGeneral">🎯 Motivación General:</label>
+            <label for="motivacionGeneral">🎯 Motivación general</label>
             <select id="motivacionGeneral" required>
               <option value="" disabled selected>Selecciona nivel</option>
               <option value="1">1 - Sin motivación</option>
@@ -326,18 +322,18 @@
           </div>
         </div>
 
-        <label for="notasSociales">📝 Notas adicionales (opcional):</label>
+        <label for="notasSociales">📝 Notas adicionales (opcional)</label>
         <textarea id="notasSociales" placeholder="Comparte cualquier observación sobre tu día o cómo te sientes..."></textarea>
 
-        <button type="submit">Guardar Evaluación de Bienestar</button>
+        <button type="submit">Guardar evaluación de bienestar</button>
         <div id="socialMsg"></div>
       </form>
 
       <div class="social-analysis">
-        <h3>📊 Análisis de Tendencias</h3>
+        <h3>Análisis de tendencias</h3>
         <div class="chart-container"><canvas id="graficoSocialTendencia"></canvas></div>
 
-        <h3>📈 Promedios Actuales</h3>
+        <h3>Promedios actuales</h3>
         <div class="chart-container"><canvas id="graficoSocial"></canvas></div>
 
         <div id="socialInsights"></div>
