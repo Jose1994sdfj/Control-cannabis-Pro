@@ -733,7 +733,7 @@ function inicializarGraficos() {
   // 1) Satisfacción mensual promedio
   const ctxSat = ctxOf("graficoSatisfaccion");
   if (ctxSat) {
-    const gradientSat = crearGradienteVertical(ctxSat, "#9CB380", "#1B241A");
+    const gradientSat = crearGradienteVertical(ctxSat, "#EF7D5C", "#231C28");
     const meses = mesesOrdenados();
     const satPorMes = meses.map((mes) => {
       const regs = registros.filter((r) => r.fecha.slice(0, 7) === mes);
@@ -749,13 +749,13 @@ function inicializarGraficos() {
           {
             label: "Satisfacción Promedio",
             data: satPorMes,
-            borderColor: "#9CB380",
+            borderColor: "#EF7D5C",
             backgroundColor: gradientSat,
             fill: true,
             tension: 0.4,
             pointRadius: 5,
             pointHoverRadius: 7,
-            pointBackgroundColor: "#9CB380",
+            pointBackgroundColor: "#EF7D5C",
             borderWidth: 2,
           },
         ],
@@ -767,18 +767,18 @@ function inicializarGraficos() {
           y: {
             min: 0,
             max: 10,
-            grid: { borderDash: [5, 5], color: "#9CB38055" },
-            ticks: { color: "#9CB380" },
+            grid: { borderDash: [5, 5], color: "#EF7D5C55" },
+            ticks: { color: "#EF7D5C" },
           },
           x: {
             grid: { display: false },
-            ticks: { color: "#9CB380" },
+            ticks: { color: "#EF7D5C" },
           },
         },
         plugins: {
-          legend: { labels: { color: "#9CB380" } },
+          legend: { labels: { color: "#EF7D5C" } },
           tooltip: {
-            backgroundColor: "#9CB380cc",
+            backgroundColor: "#EF7D5Ccc",
             titleColor: "#000",
             bodyColor: "#000",
             cornerRadius: 10,
@@ -796,7 +796,7 @@ function inicializarGraficos() {
     const consumoMensual = calcularConsumoMensual();
     const labels = Object.keys(consumoMensual).sort();
     const dataVals = labels.map((m) => consumoMensual[m]);
-    const grad = crearGradienteVertical(ctxCons, "#D9A24B", "#3A2A12");
+    const grad = crearGradienteVertical(ctxCons, "#F2A154", "#3A2A12");
 
     chartConsumoMensual = new Chart(ctxCons, {
       type: "bar",
@@ -809,7 +809,7 @@ function inicializarGraficos() {
             backgroundColor: grad,
             borderRadius: 10,
             borderSkipped: false,
-            hoverBackgroundColor: "#E8B368",
+            hoverBackgroundColor: "#F0B36B",
             barPercentage: 0.7,
           },
         ],
@@ -820,18 +820,18 @@ function inicializarGraficos() {
         scales: {
           y: {
             beginAtZero: true,
-            grid: { borderDash: [3, 3], color: "#D9A24B55" },
-            ticks: { color: "#D9A24B" },
+            grid: { borderDash: [3, 3], color: "#F2A15455" },
+            ticks: { color: "#F2A154" },
           },
           x: {
             grid: { display: false },
-            ticks: { color: "#D9A24B" },
+            ticks: { color: "#F2A154" },
           },
         },
         plugins: {
-          legend: { labels: { color: "#D9A24B" } },
+          legend: { labels: { color: "#F2A154" } },
           tooltip: {
-            backgroundColor: "#D9A24Bcc",
+            backgroundColor: "#F2A154cc",
             titleColor: "#000",
             bodyColor: "#000",
             cornerRadius: 6,
@@ -849,7 +849,7 @@ function inicializarGraficos() {
     const costoProm = calcularCostoPromedioPorGramo();
     const labels = Object.keys(costoProm).sort();
     const dataVals = labels.map((m) => costoProm[m]);
-    const grad = crearGradienteVertical(ctxCosto, "#6FA8A0", "#16302C");
+    const grad = crearGradienteVertical(ctxCosto, "#C97B94", "#3A1F28");
 
     chartCostoGramo = new Chart(ctxCosto, {
       type: "line",
@@ -859,7 +859,7 @@ function inicializarGraficos() {
           {
             label: "Costo promedio por gramo ($)",
             data: dataVals,
-            borderColor: "#6FA8A0",
+            borderColor: "#C97B94",
             backgroundColor: grad,
             fill: true,
             tension: 0.3,
@@ -875,18 +875,18 @@ function inicializarGraficos() {
         scales: {
           y: {
             beginAtZero: true,
-            grid: { color: "#6FA8A055", borderDash: [4, 4] },
-            ticks: { color: "#6FA8A0" },
+            grid: { color: "#C97B9455", borderDash: [4, 4] },
+            ticks: { color: "#C97B94" },
           },
           x: {
-            ticks: { color: "#6FA8A0" },
+            ticks: { color: "#C97B94" },
             grid: { display: false },
           },
         },
         plugins: {
-          legend: { labels: { color: "#6FA8A0" } },
+          legend: { labels: { color: "#C97B94" } },
           tooltip: {
-            backgroundColor: "#6FA8A055",
+            backgroundColor: "#C97B9455",
             titleColor: "#000",
             bodyColor: "#000",
             cornerRadius: 5,
@@ -904,7 +904,7 @@ function inicializarGraficos() {
     const frecMetodo = calcularFrecuenciaPorMetodo();
     const labels = Object.keys(frecMetodo).map((m) => m.charAt(0).toUpperCase() + m.slice(1));
     const dataVals = Object.values(frecMetodo);
-    const coloresMetodo = ["#9CB380", "#D9A24B", "#C9694F", "#6FA8A0", "#A78BC9", "#E0C68C"];
+    const coloresMetodo = ["#EF7D5C", "#F2A154", "#C9694F", "#C97B94", "#9C7BB0", "#E6C17A"];
 
     chartMetodo = new Chart(ctxMetodo, {
       type: "doughnut",
@@ -914,7 +914,7 @@ function inicializarGraficos() {
           {
             data: dataVals,
             backgroundColor: coloresMetodo,
-            borderColor: "#12180F",
+            borderColor: "#18131C",
             borderWidth: 2,
           },
         ],
@@ -923,9 +923,9 @@ function inicializarGraficos() {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { position: "right", labels: { color: "#9CB380" } },
+          legend: { position: "right", labels: { color: "#EF7D5C" } },
           tooltip: {
-            backgroundColor: "#9CB380cc",
+            backgroundColor: "#EF7D5Ccc",
             titleColor: "#000",
             bodyColor: "#000",
             cornerRadius: 6,
@@ -943,7 +943,7 @@ function inicializarGraficos() {
     const satMotivo = calcularSatisfaccionPorMotivo();
     const labels = Object.keys(satMotivo).map((m) => m.charAt(0).toUpperCase() + m.slice(1));
     const dataVals = Object.values(satMotivo);
-    const grad = crearGradienteVertical(ctxMotivo, "#C9694F", "#D9A24B");
+    const grad = crearGradienteVertical(ctxMotivo, "#C9694F", "#F2A154");
 
     chartMotivo = new Chart(ctxMotivo, {
       type: "bar",
@@ -966,18 +966,18 @@ function inicializarGraficos() {
           x: {
             min: 0,
             max: 10,
-            ticks: { color: "#D9A24B" },
-            grid: { color: "#D9A24B55", borderDash: [3, 3] },
+            ticks: { color: "#F2A154" },
+            grid: { color: "#F2A15455", borderDash: [3, 3] },
           },
           y: {
-            ticks: { color: "#D9A24B" },
+            ticks: { color: "#F2A154" },
             grid: { display: false },
           },
         },
         plugins: {
-          legend: { labels: { color: "#D9A24B" } },
+          legend: { labels: { color: "#F2A154" } },
           tooltip: {
-            backgroundColor: "#D9A24Bcc",
+            backgroundColor: "#F2A154cc",
             titleColor: "#000",
             bodyColor: "#000",
             cornerRadius: 8,
@@ -1030,8 +1030,8 @@ function inicializarGraficoDashboard() {
   const consumoDiario = dias.map(d => datosPorDia[d].consumo);
   const satisfaccionDiaria = dias.map(d => datosPorDia[d].satisfaccion / datosPorDia[d].count);
 
-  const gradient1 = crearGradienteVertical(ctx, "#9CB380", "#1B241A");
-  const gradient2 = crearGradienteVertical(ctx, "#D9A24B", "#7A4A1E");
+  const gradient1 = crearGradienteVertical(ctx, "#EF7D5C", "#231C28");
+  const gradient2 = crearGradienteVertical(ctx, "#F2A154", "#7A4A1E");
 
   chartDashboard = new Chart(ctx, {
     type: "line",
@@ -1041,7 +1041,7 @@ function inicializarGraficoDashboard() {
         {
           label: "Consumo (g)",
           data: consumoDiario,
-          borderColor: "#9CB380",
+          borderColor: "#EF7D5C",
           backgroundColor: gradient1,
           fill: false,
           tension: 0.4,
@@ -1050,7 +1050,7 @@ function inicializarGraficoDashboard() {
         {
           label: "Satisfacción",
           data: satisfaccionDiaria,
-          borderColor: "#D9A24B",
+          borderColor: "#F2A154",
           backgroundColor: gradient2,
           fill: false,
           tension: 0.4,
@@ -1074,8 +1074,8 @@ function inicializarGraficoDashboard() {
           type: 'linear',
           display: true,
           position: 'left',
-          ticks: { color: "#9CB380" },
-          grid: { color: "#9CB38055" },
+          ticks: { color: "#EF7D5C" },
+          grid: { color: "#EF7D5C55" },
         },
         y1: {
           type: 'linear',
@@ -1083,7 +1083,7 @@ function inicializarGraficoDashboard() {
           position: 'right',
           min: 0,
           max: 10,
-          ticks: { color: "#D9A24B" },
+          ticks: { color: "#F2A154" },
           grid: { drawOnChartArea: false },
         },
       },
@@ -1095,8 +1095,8 @@ function inicializarGraficoDashboard() {
         },
         tooltip: {
           backgroundColor: "rgba(18, 24, 15, 0.92)",
-          titleColor: "#9CB380",
-          bodyColor: "#F1EDE4",
+          titleColor: "#EF7D5C",
+          bodyColor: "#F4EDE3",
           cornerRadius: 8,
         },
       },
@@ -1642,9 +1642,9 @@ function inicializarGraficoSocial() {
           label: "Tu Bienestar",
           data: [promedioInteracciones, promedioDesempeno, promedioEstado, promedioSueno, promedioMotivacion, 10 - promedioEstres], // Estrés invertido para mejor visualización
           backgroundColor: "rgba(156, 179, 128, 0.2)",
-          borderColor: "#9CB380",
+          borderColor: "#EF7D5C",
           borderWidth: 2,
-          pointBackgroundColor: "#9CB380",
+          pointBackgroundColor: "#EF7D5C",
           pointBorderColor: "#fff",
           pointRadius: 5,
         },
@@ -1658,21 +1658,21 @@ function inicializarGraficoSocial() {
           min: 0,
           max: 10,
           ticks: { 
-            color: "#9CB380", 
+            color: "#EF7D5C", 
             stepSize: 2,
             backdropColor: "transparent",
           },
-          grid: { color: "#9CB38044" },
-          pointLabels: { color: "#9CB380", font: { size: 12 } },
+          grid: { color: "#EF7D5C44" },
+          pointLabels: { color: "#EF7D5C", font: { size: 12 } },
         },
       },
       plugins: {
         legend: { 
-          labels: { color: "#9CB380" },
+          labels: { color: "#EF7D5C" },
           position: 'bottom'
         },
         tooltip: {
-          backgroundColor: "#9CB380cc",
+          backgroundColor: "#EF7D5Ccc",
           titleColor: "#000",
           bodyColor: "#000",
           cornerRadius: 6,
@@ -1729,7 +1729,7 @@ function inicializarGraficoSocialTendencia() {
         {
           label: "Estado de Ánimo",
           data: animo,
-          borderColor: "#D9A24B",
+          borderColor: "#F2A154",
           backgroundColor: "rgba(217, 162, 75, 0.1)",
           borderWidth: 3,
           fill: false,
@@ -1738,7 +1738,7 @@ function inicializarGraficoSocialTendencia() {
         {
           label: "Productividad",
           data: productividad,
-          borderColor: "#9CB380",
+          borderColor: "#EF7D5C",
           backgroundColor: "rgba(156, 179, 128, 0.1)",
           borderWidth: 2,
           fill: false,
@@ -1747,7 +1747,7 @@ function inicializarGraficoSocialTendencia() {
         {
           label: "Calidad Sueño",
           data: sueno,
-          borderColor: "#A78BC9",
+          borderColor: "#9C7BB0",
           backgroundColor: "rgba(167, 139, 201, 0.1)",
           borderWidth: 2,
           fill: false,
@@ -1756,7 +1756,7 @@ function inicializarGraficoSocialTendencia() {
         {
           label: "Motivación",
           data: motivacion,
-          borderColor: "#6FA8A0",
+          borderColor: "#C97B94",
           backgroundColor: "rgba(111, 168, 160, 0.1)",
           borderWidth: 2,
           fill: false,
@@ -1785,34 +1785,34 @@ function inicializarGraficoSocialTendencia() {
         y: {
           min: 0,
           max: 10,
-          ticks: { color: "#9CB380", stepSize: 1 },
-          grid: { color: "#9CB38044", borderDash: [3, 3] },
+          ticks: { color: "#EF7D5C", stepSize: 1 },
+          grid: { color: "#EF7D5C44", borderDash: [3, 3] },
           title: {
             display: true,
             text: 'Puntuación (1-10)',
-            color: "#9CB380"
+            color: "#EF7D5C"
           }
         },
         x: {
-          ticks: { color: "#9CB380" },
+          ticks: { color: "#EF7D5C" },
           grid: { display: false },
           title: {
             display: true,
             text: 'Tiempo',
-            color: "#9CB380"
+            color: "#EF7D5C"
           }
         },
       },
       plugins: {
         legend: { 
-          labels: { color: "#9CB380" },
+          labels: { color: "#EF7D5C" },
           position: 'top'
         },
         tooltip: {
-          backgroundColor: "#12180F",
-          titleColor: "#9CB380",
-          bodyColor: "#F1EDE4",
-          borderColor: "#9CB380",
+          backgroundColor: "#18131C",
+          titleColor: "#EF7D5C",
+          bodyColor: "#F4EDE3",
+          borderColor: "#EF7D5C",
           borderWidth: 1,
           cornerRadius: 8,
           padding: 10,
