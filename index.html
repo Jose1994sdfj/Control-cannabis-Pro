@@ -1,351 +1,228 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Bitácora · Control Consumo Cannabis Pro</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#1b241a" />
-  <link rel="icon" type="image/png" sizes="192x192" href="icon-192x192.png" />
-  <link rel="apple-touch-icon" href="icon-192x192.png" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0a0a0f">
+    <title>Weigh & Flow · Cannabis Companion</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
 </head>
 <body>
-  <header>
-    <h1>Bitácora Cannabis <span class="beta-badge">Beta</span></h1>
-  </header>
 
-  <!-- Navegación -->
-  <div class="tabs-container">
-    <!-- Barra de pestañas normal (desktop) -->
-    <div class="tabs">
-      <button data-tab="login-tab">🔑 Iniciar sesión</button>
-      <button data-tab="dashboard-tab" disabled>📊 Dashboard</button>
-      <button data-tab="add-tab" disabled>➕ Agregar</button>
-      <button data-tab="view-tab" disabled>📋 Registros</button>
-      <button data-tab="stats-tab" disabled>📈 Estadísticas</button>
-      <button data-tab="rec-tab" disabled>💡 Recomendaciones</button>
-      <button data-tab="social-tab" disabled>🤝 Social</button>
-      <button id="themeToggle">🌙</button>
-      <button id="logoutBtn" hidden>🔒 Cerrar sesión</button>
+<!-- ========== OVERLAY DE CARGA ========== -->
+<div id="splash-overlay" class="splash">
+    <div class="splash-content">
+        <div class="splash-icon">⚖️</div>
+        <h1>Weigh & Flow</h1>
+        <p>Inicializando sensor óptico...</p>
+        <div class="loader-bar"><div class="loader-fill" id="loaderFill"></div></div>
     </div>
+</div>
 
-    <!-- Menú hamburguesa (móvil) -->
-    <button class="hamburger-menu" id="hamburgerBtn">
-      ☰ Menú
+<!-- ========== NAVEGACIÓN PRINCIPAL ========== -->
+<nav class="bottom-nav" id="bottomNav">
+    <button class="nav-btn active" data-tab="tab-home" aria-label="Inicio">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">Inicio</span>
     </button>
+    <button class="nav-btn" data-tab="tab-scan" aria-label="Escáner">
+        <span class="nav-icon">📸</span>
+        <span class="nav-label">Escáner</span>
+    </button>
+    <button class="nav-btn" data-tab="tab-journal" aria-label="Diario">
+        <span class="nav-icon">📓</span>
+        <span class="nav-label">Diario</span>
+    </button>
+    <button class="nav-btn" data-tab="tab-profile" aria-label="Perfil">
+        <span class="nav-icon">👤</span>
+        <span class="nav-label">Perfil</span>
+    </button>
+</nav>
 
-    <!-- Navegación móvil -->
-    <div class="mobile-nav" id="mobileNav">
-      <button data-tab="login-tab">🔑 Iniciar sesión</button>
-      <button data-tab="dashboard-tab" disabled>📊 Dashboard</button>
-      <button data-tab="add-tab" disabled>➕ Agregar registro</button>
-      <button data-tab="view-tab" disabled>📋 Ver registros</button>
-      <button data-tab="stats-tab" disabled>📈 Estadísticas</button>
-      <button data-tab="rec-tab" disabled>💡 Recomendaciones</button>
-      <button data-tab="social-tab" disabled>🤝 Desempeño social</button>
-      <button id="themeToggleMobile">🌙 Cambiar tema</button>
-      <button id="logoutBtnMobile" hidden>🔒 Cerrar sesión</button>
-    </div>
-  </div>
+<!-- ========== CONTENEDOR DE PANTALLAS ========== -->
+<main id="appContainer">
 
-  <main>
-    <!-- Iniciar sesión -->
-    <section id="login-tab" class="tab active">
-      <form>
-        <label for="usernameInput">Nombre de usuario</label>
-        <input type="text" id="usernameInput" placeholder="¿Cómo te llamas?" />
-        <button type="button" id="loginBtn">Entrar</button>
-        <div id="loginMsg"></div>
-      </form>
-    </section>
+    <!-- ======== TAB 1: HOME ======== -->
+    <section id="tab-home" class="tab-panel active">
+        <header class="panel-header">
+            <div class="greeting">
+                <span class="greeting-emoji">🌿</span>
+                <div>
+                    <h2 id="greetingText">Buenas tardes,</h2>
+                    <span class="sub-greeting">Tu dosis inteligente</span>
+                </div>
+            </div>
+            <div class="health-badge" id="healthBadge">
+                <span>⚡</span> Tolerancia: <strong id="toleranceLevel">Media</strong>
+            </div>
+        </header>
 
-    <!-- Dashboard -->
-    <section id="dashboard-tab" class="tab">
-      <h2>Resumen</h2>
-
-      <div class="dashboard-grid">
-        <!-- Tarjetas de métricas -->
-        <div class="metric-card">
-          <h3>Registros totales</h3>
-          <div class="metric-value" id="totalRegistros">0</div>
+        <div class="quick-stats">
+            <div class="stat-card">
+                <span class="stat-icon">🧠</span>
+                <div>
+                    <span class="stat-value" id="todaySessions">0</span>
+                    <span class="stat-label">Sesiones hoy</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon">⚖️</span>
+                <div>
+                    <span class="stat-value" id="todayGrams">0.0</span>
+                    <span class="stat-label">Gramos totales</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon">😌</span>
+                <div>
+                    <span class="stat-value" id="avgEffect">—</span>
+                    <span class="stat-label">Efecto promedio</span>
+                </div>
+            </div>
         </div>
 
-        <div class="metric-card">
-          <h3>Gasto total</h3>
-          <div class="metric-value" id="gastoTotal">$0</div>
+        <div class="section-title">
+            <span>Últimas sesiones</span>
+            <button class="text-btn" id="viewAllBtn">Ver todas →</button>
+        </div>
+        <div id="recentSessions" class="recent-list">
+            <!-- Renderizado por JS -->
+            <div class="empty-state">Aún no hay sesiones. ¡Escanea tu primer cogollo!</div>
         </div>
 
-        <div class="metric-card">
-          <h3>Consumo total</h3>
-          <div class="metric-value" id="consumoTotal">0g</div>
+        <div class="tip-card">
+            <span class="tip-emoji">💡</span>
+            <div>
+                <strong>Consejo del día:</strong>
+                <p id="dailyTip">Escanea tu cogollo antes de consumir para registrar dosis precisas.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======== TAB 2: ESCÁNER ======== -->
+    <section id="tab-scan" class="tab-panel">
+        <header class="panel-header">
+            <h2>📸 Escáner de peso</h2>
+            <span class="sub-greeting">Coloca un cogollo junto a una moneda de 1€/1$</span>
+        </header>
+
+        <div class="scanner-container">
+            <div class="camera-wrapper" id="cameraWrapper">
+                <video id="video" autoplay playsinline muted></video>
+                <canvas id="overlayCanvas"></canvas>
+                <div class="scan-guide">
+                    <div class="guide-box" id="guideBox">
+                        <span class="guide-text">🪙 Coloca la moneda AQUÍ</span>
+                        <div class="coin-reference"></div>
+                    </div>
+                </div>
+                <button class="capture-btn" id="captureBtn" aria-label="Capturar">
+                    <span class="capture-ring"></span>
+                    <span class="capture-inner">📷</span>
+                </button>
+            </div>
+
+            <div id="resultPanel" class="result-panel hidden">
+                <div class="result-header">
+                    <span class="result-icon">⚖️</span>
+                    <div>
+                        <h3>Peso estimado</h3>
+                        <span id="weightDisplay" class="weight-big">0.0 g</span>
+                    </div>
+                </div>
+                <div class="result-details">
+                    <div class="detail-row">
+                        <span>📏 Área detectada</span>
+                        <span id="areaDisplay">—</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>📊 Confianza</span>
+                        <span id="confidenceDisplay">—</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>🏷️ Cepa asociada</span>
+                        <input type="text" id="strainInput" placeholder="Ej: Amnesia Haze" class="strain-input">
+                    </div>
+                </div>
+                <div class="result-actions">
+                    <button class="btn-primary" id="saveWeightBtn">✅ Guardar sesión</button>
+                    <button class="btn-secondary" id="retakeBtn">🔄 Repetir</button>
+                </div>
+            </div>
         </div>
 
-        <div class="metric-card">
-          <h3>Satisfacción promedio</h3>
-          <div class="metric-value" id="satisfaccionPromedio">0/10</div>
+        <div class="calibration-note">
+            ⚠️ El peso es estimado. Usa una báscula digital para dosis médicas exactas.
         </div>
-      </div>
-
-      <!-- Gráfico resumen en dashboard -->
-      <div class="dashboard-chart">
-        <h3>Tendencia · últimos 30 días</h3>
-        <div class="chart-container">
-          <canvas id="graficoDashboard"></canvas>
-        </div>
-      </div>
-
-      <!-- Exportar datos -->
-      <div class="data-management">
-        <h3>Gestión de datos</h3>
-        <div class="export-import-buttons">
-          <button id="exportPDFBtn" class="export-btn">📄 Exportar reporte PDF</button>
-        </div>
-        <div id="exportMsg"></div>
-      </div>
     </section>
 
-    <!-- Agregar registro -->
-    <section id="add-tab" class="tab">
-      <form id="addForm">
-        <label for="fecha">Fecha</label>
-        <input type="date" id="fecha" required />
+    <!-- ======== TAB 3: DIARIO ======== -->
+    <section id="tab-journal" class="tab-panel">
+        <header class="panel-header">
+            <h2>📓 Diario de consumo</h2>
+            <span class="sub-greeting">Tu historial completo</span>
+        </header>
 
-        <label for="tipo">Tipo</label>
-        <select id="tipo" required>
-          <option value="" disabled selected>Selecciona tipo</option>
-          <option value="Índica">Índica</option>
-          <option value="Sativa">Sativa</option>
-          <option value="Híbrida">Híbrida</option>
-          <option value="CBD dominante">CBD dominante</option>
-        </select>
-
-        <label for="proveedor">Proveedor</label>
-        <select id="proveedor" required>
-          <option value="" disabled selected>Selecciona proveedor</option>
-          <option value="Proveedor A">Proveedor A</option>
-          <option value="Proveedor B">Proveedor B</option>
-          <option value="Proveedor C">Proveedor C</option>
-          <option value="Proveedor D">Proveedor D</option>
-        </select>
-
-        <label for="cantidad">Cantidad (g)</label>
-        <input type="number" id="cantidad" placeholder="Cantidad en gramos" min="0" step="0.1" required />
-
-        <label for="precio">Precio total ($)</label>
-        <input type="number" id="precio" placeholder="Precio total" min="0" step="0.01" required />
-
-        <label for="motivo">Motivo</label>
-        <select id="motivo" required>
-          <option value="" disabled selected>Selecciona motivo</option>
-          <option value="Relajación">Relajación</option>
-          <option value="Medicinal">Medicinal</option>
-          <option value="Recreativo">Recreativo</option>
-          <option value="Creatividad">Creatividad</option>
-          <option value="Dolor">Dolor</option>
-          <option value="Ansiedad">Ansiedad</option>
-        </select>
-
-        <label for="metodo">Método de consumo</label>
-        <select id="metodo" required>
-          <option value="" disabled selected>Selecciona método</option>
-          <option value="Fumar">Fumar</option>
-          <option value="Vapear">Vapear</option>
-          <option value="Comestibles">Comestibles</option>
-          <option value="Tinturas">Tinturas</option>
-          <option value="Tópicos">Tópicos</option>
-        </select>
-
-        <label for="satisfaccion">Satisfacción (1-10)</label>
-        <select id="satisfaccion" required>
-          <option value="" disabled selected>Selecciona nivel</option>
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
-          <option value="6">6</option>
-          <option value="7">7</option>
-          <option value="8">8</option>
-          <option value="9">9</option>
-          <option value="10">10</option>
-        </select>
-
-        <label for="efectos">Efectos secundarios</label>
-        <input type="text" id="efectos" placeholder="Ej. sequedad, sueño, apetito..." />
-
-        <label for="consciente">Consciente</label>
-        <select id="consciente">
-          <option value="true">Consciente</option>
-          <option value="false">No consciente</option>
-        </select>
-
-        <button type="submit">Guardar registro</button>
-        <div id="addMsg"></div>
-      </form>
-    </section>
-
-    <!-- Ver registros -->
-    <section id="view-tab" class="tab">
-      <input type="text" id="searchRecordsInput" placeholder="Buscar por tipo o proveedor" />
-      <div id="recordsList"></div>
-    </section>
-
-    <!-- Estadísticas -->
-    <section id="stats-tab" class="tab">
-      <h2>Satisfacción mensual</h2>
-      <div class="chart-container"><canvas id="graficoSatisfaccion"></canvas></div>
-
-      <h2>Consumo mensual (gramos)</h2>
-      <div class="chart-container"><canvas id="graficoConsumoMensual"></canvas></div>
-
-      <h2>Costo promedio por gramo</h2>
-      <div class="chart-container"><canvas id="graficoCostoGramo"></canvas></div>
-
-      <h2>Frecuencia por método</h2>
-      <div class="chart-container"><canvas id="graficoMetodo"></canvas></div>
-
-      <h2>Motivo vs. satisfacción</h2>
-      <div class="chart-container"><canvas id="graficoMotivo"></canvas></div>
-    </section>
-
-    <!-- Recomendaciones -->
-    <section id="rec-tab" class="tab">
-      <h2>Recomendaciones</h2>
-      <div id="recomendacionesBox"></div>
-    </section>
-
-    <!-- Desempeño Social -->
-    <section id="social-tab" class="tab">
-      <h2>Bienestar y vida diaria</h2>
-      <p>Registra y analiza cómo el consumo impacta en diferentes aspectos de tu día a día.</p>
-
-      <form id="socialForm">
-        <div class="social-form-grid">
-          <div class="social-form-column">
-            <label for="interaccionesSociales">💬 Interacciones sociales</label>
-            <select id="interaccionesSociales" required>
-              <option value="" disabled selected>Selecciona nivel</option>
-              <option value="1">1 - Muy pocas</option>
-              <option value="2">2 - Pocas</option>
-              <option value="3">3 - Escasas</option>
-              <option value="4">4 - Limitadas</option>
-              <option value="5">5 - Normales</option>
-              <option value="6">6 - Frecuentes</option>
-              <option value="7">7 - Abundantes</option>
-              <option value="8">8 - Muy frecuentes</option>
-              <option value="9">9 - Excelentes</option>
-              <option value="10">10 - Excepcionales</option>
-            </select>
-
-            <label for="desempenoLaboral">💼 Productividad laboral/estudios</label>
-            <select id="desempenoLaboral" required>
-              <option value="" disabled selected>Selecciona nivel</option>
-              <option value="1">1 - Muy bajo</option>
-              <option value="2">2 - Bajo</option>
-              <option value="3">3 - Por debajo del promedio</option>
-              <option value="4">4 - Ligeramente bajo</option>
-              <option value="5">5 - Promedio</option>
-              <option value="6">6 - Ligeramente alto</option>
-              <option value="7">7 - Por encima del promedio</option>
-              <option value="8">8 - Alto</option>
-              <option value="9">9 - Muy alto</option>
-              <option value="10">10 - Excepcional</option>
-            </select>
-
-            <label for="estadoAnimo">😊 Estado de ánimo general</label>
-            <select id="estadoAnimo" required>
-              <option value="" disabled selected>Selecciona estado</option>
-              <option value="1">1 - Muy negativo</option>
-              <option value="2">2 - Negativo</option>
-              <option value="3">3 - Bastante negativo</option>
-              <option value="4">4 - Ligeramente negativo</option>
-              <option value="5">5 - Neutral</option>
-              <option value="6">6 - Ligeramente positivo</option>
-              <option value="7">7 - Bastante positivo</option>
-              <option value="8">8 - Positivo</option>
-              <option value="9">9 - Muy positivo</option>
-              <option value="10">10 - Excelente</option>
-            </select>
-          </div>
-
-          <div class="social-form-column">
-            <label for="calidadSueno">😴 Calidad del sueño</label>
-            <select id="calidadSueno" required>
-              <option value="" disabled selected>Selecciona nivel</option>
-              <option value="1">1 - Muy mala</option>
-              <option value="2">2 - Mala</option>
-              <option value="3">3 - Regular-</option>
-              <option value="4">4 - Regular</option>
-              <option value="5">5 - Aceptable</option>
-              <option value="6">6 - Buena</option>
-              <option value="7">7 - Muy buena</option>
-              <option value="8">8 - Excelente</option>
-              <option value="9">9 - Perfecta</option>
-              <option value="10">10 - Excepcional</option>
-            </select>
-
-            <label for="niveleEstres">😰 Niveles de estrés</label>
-            <select id="niveleEstres" required>
-              <option value="" disabled selected>Selecciona nivel</option>
-              <option value="1">1 - Sin estrés</option>
-              <option value="2">2 - Muy bajo</option>
-              <option value="3">3 - Bajo</option>
-              <option value="4">4 - Ligeramente bajo</option>
-              <option value="5">5 - Moderado</option>
-              <option value="6">6 - Ligeramente alto</option>
-              <option value="7">7 - Alto</option>
-              <option value="8">8 - Muy alto</option>
-              <option value="9">9 - Extremo</option>
-              <option value="10">10 - Insostenible</option>
-            </select>
-
-            <label for="motivacionGeneral">🎯 Motivación general</label>
-            <select id="motivacionGeneral" required>
-              <option value="" disabled selected>Selecciona nivel</option>
-              <option value="1">1 - Sin motivación</option>
-              <option value="2">2 - Muy baja</option>
-              <option value="3">3 - Baja</option>
-              <option value="4">4 - Ligeramente baja</option>
-              <option value="5">5 - Neutra</option>
-              <option value="6">6 - Ligeramente alta</option>
-              <option value="7">7 - Alta</option>
-              <option value="8">8 - Muy alta</option>
-              <option value="9">9 - Excelente</option>
-              <option value="10">10 - Inspirado</option>
-            </select>
-          </div>
+        <div class="filter-bar">
+            <button class="filter-btn active" data-filter="all">Todas</button>
+            <button class="filter-btn" data-filter="flor">🌿 Flor</button>
+            <button class="filter-btn" data-filter="comestible">🍪 Comestible</button>
+            <button class="filter-btn" data-filter="vape">💨 Vape</button>
         </div>
 
-        <label for="notasSociales">📝 Notas adicionales (opcional)</label>
-        <textarea id="notasSociales" placeholder="Comparte cualquier observación sobre tu día o cómo te sientes..."></textarea>
-
-        <button type="submit">Guardar evaluación de bienestar</button>
-        <div id="socialMsg"></div>
-      </form>
-
-      <div class="social-analysis">
-        <h3>Análisis de tendencias</h3>
-        <div class="chart-container"><canvas id="graficoSocialTendencia"></canvas></div>
-
-        <h3>Promedios actuales</h3>
-        <div class="chart-container"><canvas id="graficoSocial"></canvas></div>
-
-        <div id="socialInsights"></div>
-      </div>
+        <div id="journalList" class="journal-list">
+            <!-- Renderizado por JS -->
+            <div class="empty-state">Todavía no has registrado ninguna sesión.</div>
+        </div>
     </section>
-  </main>
 
-  <footer>
-    <br>
-   &copy; 2025 <small>Desarrollado por <strong>JJ Solutions</strong> - Tecnología e Innovación</small> 🌿
-  </footer>
+    <!-- ======== TAB 4: PERFIL ======== -->
+    <section id="tab-profile" class="tab-panel">
+        <header class="panel-header">
+            <h2>👤 Mi perfil</h2>
+            <span class="sub-greeting">Ajusta tu experiencia</span>
+        </header>
 
-  <script src="script.js"></script>
+        <div class="profile-card">
+            <div class="avatar">🌱</div>
+            <div class="profile-info">
+                <h3 id="profileName">Usuario</h3>
+                <span id="profileSince">Miembro desde hoy</span>
+            </div>
+        </div>
+
+        <div class="settings-group">
+            <div class="setting-item">
+                <span>⚖️ Tolerancia</span>
+                <div class="tolerance-selector">
+                    <button class="tol-btn" data-tol="baja">Baja</button>
+                    <button class="tol-btn active" data-tol="media">Media</button>
+                    <button class="tol-btn" data-tol="alta">Alta</button>
+                </div>
+            </div>
+            <div class="setting-item">
+                <span>📏 Unidad de peso</span>
+                <div class="unit-selector">
+                    <button class="unit-btn active" data-unit="g">Gramos</button>
+                    <button class="unit-btn" data-unit="oz">Onzas</button>
+                </div>
+            </div>
+            <div class="setting-item">
+                <span>🔔 Recordatorios</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="reminderToggle" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <button class="btn-danger" id="clearDataBtn">🗑️ Borrar todos los datos</button>
+        <span class="version-tag">v2.0.0 · UI/UX Engine</span>
+    </section>
+
+</main>
+
+<script src="app.js"></script>
 </body>
 </html>
