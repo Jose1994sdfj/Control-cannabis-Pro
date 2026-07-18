@@ -15,8 +15,11 @@
     <div class="splash-content">
         <div class="splash-icon">⚖️</div>
         <h1>Weigh & Flow</h1>
-        <p>Inicializando sensor óptico...</p>
+        <p id="splashStatus">Inicializando sensor óptico...</p>
         <div class="loader-bar"><div class="loader-fill" id="loaderFill"></div></div>
+        <button id="skipCameraBtn" class="skip-btn" style="display:none;margin-top:20px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:10px 24px;border-radius:40px;font-family:inherit;cursor:pointer;font-size:14px;">
+            ⏭️ Usar modo demo
+        </button>
     </div>
 </div>
 
@@ -87,7 +90,6 @@
             <button class="text-btn" id="viewAllBtn">Ver todas →</button>
         </div>
         <div id="recentSessions" class="recent-list">
-            <!-- Renderizado por JS -->
             <div class="empty-state">Aún no hay sesiones. ¡Escanea tu primer cogollo!</div>
         </div>
 
@@ -111,7 +113,7 @@
             <div class="camera-wrapper" id="cameraWrapper">
                 <video id="video" autoplay playsinline muted></video>
                 <canvas id="overlayCanvas"></canvas>
-                <div class="scan-guide">
+                <div class="scan-guide" id="scanGuide">
                     <div class="guide-box" id="guideBox">
                         <span class="guide-text">🪙 Coloca la moneda AQUÍ</span>
                         <div class="coin-reference"></div>
@@ -172,7 +174,6 @@
         </div>
 
         <div id="journalList" class="journal-list">
-            <!-- Renderizado por JS -->
             <div class="empty-state">Todavía no has registrado ninguna sesión.</div>
         </div>
     </section>
