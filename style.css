@@ -1,513 +1,463 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    -webkit-tap-highlight-color: transparent;
-}
+// ============================================================
+//  Weigh & Flow - v2.2 (SIEMPRE FUNCIONA)
+// ============================================================
 
-:root {
-    --bg-primary: #0a0a0f;
-    --bg-secondary: #14141e;
-    --bg-card: #1c1c2a;
-    --bg-elevated: #26263a;
-    --text-primary: #f0eef8;
-    --text-secondary: #a8a4c0;
-    --accent: #8b7cf7;
-    --accent-glow: rgba(139, 124, 247, 0.3);
-    --green: #4ade80;
-    --amber: #fbbf24;
-    --red: #f87171;
-    --radius: 20px;
-}
+(() => {
+    'use strict';
 
-body {
-    font-family: 'Inter', -apple-system, system-ui, sans-serif;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    min-height: 100vh;
-    padding-bottom: 90px;
-    overflow-x: hidden;
-}
+    // --- ESTADO ---
+    const state = {
+        sessions: [],
+        tolerance: 'media',
+        filter: 'all',
+        currentWeight: 0,
+        currentArea: 0,
+        currentConfidence: 0
+    };
 
-/* BOTTOM NAV */
-.bottom-nav {
-    position: fixed;
-    bottom: 20px;
-    left: 20px;
-    right: 20px;
-    background: var(--bg-secondary);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 40px;
-    display: flex;
-    justify-content: space-around;
-    padding: 8px 12px;
-    z-index: 100;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
-}
-.nav-btn {
-    background: transparent;
-    border: none;
-    color: var(--text-secondary);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-    padding: 8px 16px;
-    border-radius: 30px;
-    cursor: pointer;
-    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-    font-family: inherit;
-    flex: 1;
-}
-.nav-btn .nav-icon { font-size: 22px; line-height: 1; transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
-.nav-btn .nav-label { font-size: 10px; font-weight: 500; letter-spacing: 0.3px; }
-.nav-btn.active { color: #fff; background: #26263a; }
-.nav-btn.active .nav-icon { transform: translateY(-2px); }
-.nav-btn:active { transform: scale(0.92); }
+    // --- DOM REFS ---
+    const $ = (s) => document.querySelector(s);
+    const $$ = (s) => document.querySelectorAll(s);
 
-/* TAB PANELS */
-.tab-panel {
-    display: none;
-    padding: 20px 20px 100px;
-    animation: fadeSlide 0.4s ease;
-}
-.tab-panel.active { display: block; }
-@keyframes fadeSlide {
-    from { opacity: 0; transform: translateY(12px); }
-    to { opacity: 1; transform: translateY(0); }
-}
+    const splash = $('#splash');
+    const loaderBar = $('#loaderBar');
+    const splashText = $('#splashText');
+    const video = $('#video');
+    const overlayCanvas = $('#overlayCanvas');
+    const ctx = overlayCanvas.getContext('2d');
+    const captureBtn = $('#captureBtn');
+    const resultPanel = $('#resultPanel');
+    const weightDisplay = $('#weightDisplay');
+    const areaDisplay = $('#areaDisplay');
+    const confidenceDisplay = $('#confidenceDisplay');
+    const strainInput = $('#strainInput');
+    const saveBtn = $('#saveWeightBtn');
+    const retakeBtn = $('#retakeBtn');
+    const recentList = $('#recentSessions');
+    const journalList = $('#journalList');
+    const greetingText = $('#greetingText');
+    const todaySessions = $('#todaySessions');
+    const todayGrams = $('#todayGrams');
+    const avgEffect = $('#avgEffect');
+    const toleranceLevel = $('#toleranceLevel');
+    const dailyTip = $('#dailyTip');
+    const scanStatus = $('#scanStatus');
 
-.panel-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 24px;
-    flex-wrap: wrap;
-    gap: 12px;
-}
-.panel-header h2 { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; }
-.greeting-emoji { font-size: 32px; }
-.greeting h2 { font-size: 22px; font-weight: 600; margin: 0; }
-.sub-greeting { font-size: 13px; color: var(--text-secondary); }
-.health-badge {
-    background: var(--bg-card);
-    padding: 6px 14px;
-    border-radius: 40px;
-    font-size: 13px;
-    border: 1px solid rgba(255,255,255,0.05);
-}
+    let isDemo = true;
 
-/* STATS */
-.quick-stats {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-bottom: 28px;
-}
-.stat-card {
-    background: var(--bg-card);
-    border-radius: var(--radius);
-    padding: 16px 14px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    border: 1px solid rgba(255,255,255,0.03);
-    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.stat-card:active { transform: scale(0.96); }
-.stat-icon { font-size: 24px; }
-.stat-value { font-size: 20px; font-weight: 700; display: block; line-height: 1.2; }
-.stat-label { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
+    // --- INICIALIZACIÓN ---
+    function init() {
+        // Cargar datos
+        loadFromStorage();
 
-.section-title {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin: 24px 0 14px;
-    font-weight: 600;
-    font-size: 16px;
-}
-.text-btn {
-    background: none;
-    border: none;
-    color: var(--accent);
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    font-family: inherit;
-}
-.recent-list, .journal-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-.session-item {
-    background: var(--bg-card);
-    border-radius: 16px;
-    padding: 14px 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border: 1px solid rgba(255,255,255,0.03);
-    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.session-item:active { transform: scale(0.98); }
-.session-left { display: flex; align-items: center; gap: 12px; }
-.session-left .emoji { font-size: 22px; }
-.session-info .name { font-weight: 600; font-size: 15px; }
-.session-info .meta { font-size: 12px; color: var(--text-secondary); }
-.session-right { text-align: right; }
-.session-right .weight { font-weight: 700; font-size: 16px; }
-.session-right .time { font-size: 11px; color: var(--text-secondary); }
+        // Actualizar UI
+        updateUI();
+        updateGreeting();
+        setDailyTip();
 
-.empty-state {
-    text-align: center;
-    color: var(--text-secondary);
-    padding: 40px 20px;
-    font-size: 14px;
-    background: var(--bg-card);
-    border-radius: var(--radius);
-    border: 1px dashed rgba(255,255,255,0.06);
-}
+        // Animar splash
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += Math.random() * 15 + 8;
+            if (progress > 100) progress = 100;
+            loaderBar.style.width = progress + '%';
+            
+            if (progress >= 100) {
+                clearInterval(interval);
+                splashText.textContent = '✅ Listo!';
+                setTimeout(() => {
+                    splash.style.opacity = '0';
+                    setTimeout(() => {
+                        splash.style.display = 'none';
+                    }, 600);
+                }, 300);
+            }
+        }, 150);
 
-.tip-card {
-    background: linear-gradient(135deg, rgba(139,124,247,0.12), rgba(139,124,247,0.04));
-    border: 1px solid rgba(139,124,247,0.15);
-    border-radius: var(--radius);
-    padding: 16px 18px;
-    display: flex;
-    gap: 14px;
-    margin-top: 24px;
-}
-.tip-emoji { font-size: 28px; }
-.tip-card p { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+        // Intentar cámara (en segundo plano)
+        tryInitCamera();
 
-/* SCANNER */
-.scanner-container {
-    background: var(--bg-card);
-    border-radius: var(--radius);
-    overflow: hidden;
-    border: 1px solid rgba(255,255,255,0.05);
-}
-.camera-wrapper {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 1/1;
-    background: #0a0a12;
-    overflow: hidden;
-}
-.camera-wrapper video {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-.camera-wrapper #overlayCanvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-}
-.scan-guide {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    pointer-events: none;
-}
-.guide-box {
-    border: 2px dashed rgba(255,255,255,0.25);
-    border-radius: 24px;
-    padding: 20px;
-    width: 75%;
-    height: 65%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: rgba(255,255,255,0.4);
-    font-size: 13px;
-    text-align: center;
-    background: rgba(0,0,0,0.3);
-    backdrop-filter: blur(4px);
-    pointer-events: none;
-}
-.coin-reference {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 30% 30%, #f0d060, #b8942a);
-    margin-top: 12px;
-    box-shadow: 0 0 30px rgba(255,215,0,0.2);
-}
-.capture-btn {
-    position: absolute;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 72px;
-    height: 72px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.12);
-    backdrop-filter: blur(12px);
-    border: 2px solid rgba(255,255,255,0.25);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-    z-index: 10;
-    pointer-events: auto;
-}
-.capture-btn:active { transform: translateX(-50%) scale(0.90); }
-.capture-ring {
-    position: absolute;
-    inset: -4px;
-    border-radius: 50%;
-    border: 2px solid var(--accent);
-    opacity: 0.5;
-    animation: ringPulse 2s ease-in-out infinite;
-}
-@keyframes ringPulse {
-    0%, 100% { transform: scale(1); opacity: 0.5; }
-    50% { transform: scale(1.12); opacity: 0; }
-}
-.capture-inner { font-size: 32px; }
+        // Eventos
+        bindEvents();
 
-/* RESULT */
-.result-panel {
-    padding: 20px;
-    background: var(--bg-secondary);
-    border-top: 1px solid rgba(255,255,255,0.05);
-}
-.result-panel.hidden { display: none; }
-.result-header {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 16px;
-}
-.result-icon { font-size: 36px; }
-.weight-big {
-    font-size: 32px;
-    font-weight: 800;
-    color: var(--green);
-}
-.result-details {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-bottom: 18px;
-}
-.detail-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 14px;
-    color: var(--text-secondary);
-    padding: 6px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-}
-.detail-row:last-child { border-bottom: none; }
-.strain-input {
-    background: var(--bg-elevated);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 12px;
-    padding: 8px 14px;
-    color: #fff;
-    font-size: 14px;
-    font-family: inherit;
-    width: 160px;
-    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.strain-input:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-glow);
-}
-.result-actions {
-    display: flex;
-    gap: 12px;
-}
-.btn-primary, .btn-secondary, .btn-danger {
-    flex: 1;
-    padding: 14px;
-    border-radius: 16px;
-    border: none;
-    font-weight: 600;
-    font-size: 15px;
-    font-family: inherit;
-    cursor: pointer;
-    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.btn-primary {
-    background: var(--accent);
-    color: #fff;
-    box-shadow: 0 4px 20px var(--accent-glow);
-}
-.btn-primary:active { transform: scale(0.96); }
-.btn-secondary {
-    background: var(--bg-elevated);
-    color: var(--text-secondary);
-}
-.btn-secondary:active { transform: scale(0.96); }
-.btn-danger {
-    background: rgba(248, 113, 113, 0.12);
-    color: var(--red);
-    border: 1px solid rgba(248,113,113,0.15);
-    margin-top: 20px;
-}
-.calibration-note {
-    font-size: 12px;
-    color: var(--text-secondary);
-    text-align: center;
-    padding: 14px;
-    opacity: 0.6;
-}
+        // Dibujar overlay
+        drawOverlay();
+    }
 
-/* FILTERS */
-.filter-bar {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 18px;
-    flex-wrap: wrap;
-}
-.filter-btn {
-    padding: 6px 18px;
-    border-radius: 40px;
-    border: 1px solid rgba(255,255,255,0.06);
-    background: transparent;
-    color: var(--text-secondary);
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-    font-family: inherit;
-}
-.filter-btn.active {
-    background: var(--accent);
-    color: #fff;
-    border-color: var(--accent);
-}
-.filter-btn:active { transform: scale(0.94); }
+    // --- CÁMARA ---
+    async function tryInitCamera() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment', width: { ideal: 640 } }
+            });
+            video.srcObject = stream;
+            await video.play();
+            video.style.display = 'block';
+            isDemo = false;
+            scanStatus.textContent = '📷 Cámara activa';
+            resizeCanvas();
+            updateGuideText('Coloca la moneda junto al cogollo', true);
+            console.log('✅ Cámara iniciada');
+        } catch (e) {
+            isDemo = true;
+            video.style.display = 'none';
+            scanStatus.textContent = '🧪 Modo Demo (sin cámara)';
+            updateGuideText('Modo Demo: presiona 📷 para simular un peso', false);
+            console.log('ℹ️ Modo demo activo');
+        }
+    }
 
-/* PROFILE */
-.profile-card {
-    background: var(--bg-card);
-    border-radius: var(--radius);
-    padding: 24px;
-    display: flex;
-    align-items: center;
-    gap: 18px;
-    margin-bottom: 28px;
-    border: 1px solid rgba(255,255,255,0.04);
-}
-.avatar {
-    font-size: 48px;
-    background: var(--bg-elevated);
-    width: 72px;
-    height: 72px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.profile-info h3 { font-size: 18px; }
-.profile-info span { font-size: 13px; color: var(--text-secondary); }
+    function updateGuideText(text, hasCoin) {
+        const guide = $('#guideBox');
+        if (guide) {
+            guide.innerHTML = `
+                <span style="font-size:40px;">${hasCoin ? '🪙' : '🧪'}</span>
+                <span style="font-size:14px;color:var(--text-secondary);margin-top:8px;">${text}</span>
+                ${hasCoin ? '<div class="coin-reference"></div>' : ''}
+            `;
+        }
+    }
 
-.settings-group {
-    background: var(--bg-card);
-    border-radius: var(--radius);
-    padding: 8px;
-    border: 1px solid rgba(255,255,255,0.04);
-}
-.setting-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 14px 12px;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-    font-size: 14px;
-}
-.setting-item:last-child { border-bottom: none; }
-.tolerance-selector, .unit-selector {
-    display: flex;
-    gap: 6px;
-}
-.tol-btn, .unit-btn {
-    padding: 4px 14px;
-    border-radius: 30px;
-    border: 1px solid rgba(255,255,255,0.06);
-    background: transparent;
-    color: var(--text-secondary);
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-    font-family: inherit;
-}
-.tol-btn.active, .unit-btn.active {
-    background: var(--accent);
-    color: #fff;
-    border-color: var(--accent);
-}
-.toggle-switch {
-    position: relative;
-    width: 48px;
-    height: 28px;
-    cursor: pointer;
-}
-.toggle-switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-.toggle-slider {
-    position: absolute;
-    inset: 0;
-    background: var(--bg-elevated);
-    border-radius: 40px;
-    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.toggle-slider::before {
-    content: "";
-    position: absolute;
-    height: 20px;
-    width: 20px;
-    left: 4px;
-    bottom: 4px;
-    background: #fff;
-    border-radius: 50%;
-    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.toggle-switch input:checked + .toggle-slider {
-    background: var(--accent);
-}
-.toggle-switch input:checked + .toggle-slider::before {
-    transform: translateX(20px);
-}
-.version-tag {
-    display: block;
-    text-align: center;
-    font-size: 11px;
-    color: var(--text-secondary);
-    margin-top: 24px;
-    opacity: 0.3;
-}
+    function resizeCanvas() {
+        const rect = video.getBoundingClientRect();
+        overlayCanvas.width = rect.width || 640;
+        overlayCanvas.height = rect.height || 480;
+    }
 
-@media (min-width: 600px) {
-    body { max-width: 480px; margin: 0 auto; }
-    .bottom-nav { left: 50%; transform: translateX(-50%); max-width: 440px; }
-}
-@media (max-width: 400px) {
-    .quick-stats { grid-template-columns: 1fr; }
-    .stat-card { padding: 12px; }
-    .greeting h2 { font-size: 18px; }
-}
+    // --- CAPTURAR ---
+    function captureAndWeigh() {
+        if (isDemo) {
+            const grams = 0.5 + Math.random() * 2.5;
+            const area = Math.round(200 + Math.random() * 800);
+            const confidence = Math.round(60 + Math.random() * 35);
+            showResult(grams, area, confidence);
+            return;
+        }
+
+        if (!video.srcObject || video.readyState < 2) {
+            alert('📷 La cámara no está lista. Usa el modo demo.');
+            return;
+        }
+
+        resizeCanvas();
+        ctx.drawImage(video, 0, 0, overlayCanvas.width, overlayCanvas.height);
+        const imageData = ctx.getImageData(0, 0, overlayCanvas.width, overlayCanvas.height);
+        const data = imageData.data;
+
+        const coin = findCoin(data, overlayCanvas.width, overlayCanvas.height);
+        if (!coin) {
+            const green = countGreen(data);
+            if (green > 300) {
+                const grams = Math.max(0.3, green * 0.003);
+                showResult(grams, green, 50);
+                return;
+            }
+            alert('🔍 No se detectó moneda. Coloca una moneda de 1€ junto al cogollo.');
+            return;
+        }
+
+        const bud = findBud(data, overlayCanvas.width, overlayCanvas.height, coin);
+        if (!bud || bud < 80) {
+            alert('🌿 No se detectó el cogollo. Asegúrate de que esté junto a la moneda.');
+            return;
+        }
+
+        const coinAreaPx = Math.PI * coin.radius * coin.radius;
+        const ratio = bud / coinAreaPx;
+        const grams = ratio * (Math.PI * (23.25/2) ** 2 * 0.0012);
+        const confidence = Math.min(92, 50 + ratio * 12);
+
+        showResult(Math.max(0.2, grams), bud, Math.round(confidence));
+    }
+
+    // --- DETECTORES ---
+    function findCoin(data, w, h) {
+        let maxB = 0, cx = w/2, cy = h/2, found = false;
+        for (let y = 20; y < h-20; y += 5) {
+            for (let x = 20; x < w-20; x += 5) {
+                const idx = (y * w + x) * 4;
+                const b = (data[idx] + data[idx+1] + data[idx+2]) / 3;
+                if (b > maxB && b > 80) {
+                    maxB = b; cx = x; cy = y; found = true;
+                }
+            }
+        }
+        if (!found) return null;
+        let radius = 25;
+        for (let r = 10; r < 80; r++) {
+            const x1 = Math.min(w-1, Math.round(cx + r));
+            const y1 = Math.min(h-1, Math.round(cy + r));
+            const idx = (y1 * w + x1) * 4;
+            if ((data[idx] + data[idx+1] + data[idx+2]) / 3 < 50 && r > 15) {
+                radius = r; break;
+            }
+        }
+        return { x: cx, y: cy, radius: Math.min(Math.max(radius, 18), 75) };
+    }
+
+    function countGreen(data) {
+        let c = 0;
+        for (let i = 0; i < data.length; i += 16) {
+            const r = data[i], g = data[i+1], b = data[i+2];
+            if (g > r && g > b && g > 35 && r < 180) c++;
+            else if (r > 80 && g > 60 && b < 100 && r < 190) c++;
+        }
+        return c;
+    }
+
+    function findBud(data, w, h, coin) {
+        let c = 0;
+        const minX = Math.max(10, coin.x - 220);
+        const maxX = Math.min(w-10, coin.x + 220);
+        const minY = Math.max(10, coin.y - 220);
+        const maxY = Math.min(h-10, coin.y + 220);
+        for (let y = minY; y < maxY; y += 3) {
+            for (let x = minX; x < maxX; x += 3) {
+                if (Math.hypot(x - coin.x, y - coin.y) < coin.radius * 1.3) continue;
+                const idx = (y * w + x) * 4;
+                const r = data[idx], g = data[idx+1], b = data[idx+2];
+                if (g > r && g > b && g > 30 && r < 180) c++;
+                else if (r > 75 && g > 55 && b < 100 && r < 190) c++;
+            }
+        }
+        return c;
+    }
+
+    // --- RESULTADO ---
+    function showResult(grams, area, confidence) {
+        state.currentWeight = Math.max(0.1, grams);
+        state.currentArea = area;
+        state.currentConfidence = confidence;
+
+        weightDisplay.textContent = state.currentWeight.toFixed(1) + ' g';
+        areaDisplay.textContent = state.currentArea + ' px²';
+        confidenceDisplay.textContent = state.currentConfidence + '%';
+
+        if (state.currentConfidence > 75) weightDisplay.style.color = '#4ade80';
+        else if (state.currentConfidence > 50) weightDisplay.style.color = '#fbbf24';
+        else weightDisplay.style.color = '#f87171';
+
+        resultPanel.classList.remove('hidden');
+        resultPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        if (navigator.vibrate) navigator.vibrate(15);
+    }
+
+    // --- GUARDAR ---
+    function saveSession() {
+        const strain = strainInput.value.trim() || 'Cepa sin nombre';
+        const session = {
+            id: Date.now(),
+            weight: state.currentWeight,
+            area: state.currentArea,
+            confidence: state.currentConfidence,
+            strain: strain,
+            type: 'flor',
+            timestamp: new Date().toISOString()
+        };
+        state.sessions.unshift(session);
+        saveToStorage();
+        updateUI();
+        resultPanel.classList.add('hidden');
+        strainInput.value = '';
+        saveBtn.textContent = '✅ Guardado!';
+        setTimeout(() => saveBtn.textContent = '✅ Guardar sesión', 1500);
+    }
+
+    // --- STORAGE ---
+    function saveToStorage() {
+        try {
+            localStorage.setItem('wf_sessions', JSON.stringify(state.sessions));
+            localStorage.setItem('wf_tolerance', state.tolerance);
+        } catch(e) {}
+    }
+
+    function loadFromStorage() {
+        try {
+            const s = localStorage.getItem('wf_sessions');
+            if (s) state.sessions = JSON.parse(s);
+            const t = localStorage.getItem('wf_tolerance');
+            if (t) state.tolerance = t;
+        } catch(e) {}
+    }
+
+    // --- UI ---
+    function updateUI() {
+        const today = new Date().toDateString();
+        const todayArr = state.sessions.filter(s => new Date(s.timestamp).toDateString() === today);
+        todaySessions.textContent = todayArr.length;
+        todayGrams.textContent = todayArr.reduce((a, s) => a + s.weight, 0).toFixed(1);
+
+        const recent = state.sessions.slice(0, 3);
+        if (recent.length === 0) {
+            recentList.innerHTML = `<div class="empty-state">Aún no hay sesiones. ¡Escanea tu primer cogollo!</div>`;
+        } else {
+            recentList.innerHTML = recent.map(s => `
+                <div class="session-item">
+                    <div class="session-left">
+                        <span class="emoji">🌿</span>
+                        <div class="session-info">
+                            <span class="name">${escapeHtml(s.strain)}</span>
+                            <span class="meta">${new Date(s.timestamp).toLocaleTimeString('es', {hour:'2-digit',minute:'2-digit'})}</span>
+                        </div>
+                    </div>
+                    <div class="session-right">
+                        <span class="weight">${s.weight.toFixed(1)}g</span>
+                        <span class="time">${s.confidence}%</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        renderJournal();
+        toleranceLevel.textContent = state.tolerance.charAt(0).toUpperCase() + state.tolerance.slice(1);
+    }
+
+    function renderJournal() {
+        let filtered = state.sessions;
+        if (state.filter !== 'all') {
+            filtered = state.sessions.filter(s => s.type === state.filter);
+        }
+        if (filtered.length === 0) {
+            journalList.innerHTML = `<div class="empty-state">No hay registros con este filtro.</div>`;
+        } else {
+            journalList.innerHTML = filtered.map(s => `
+                <div class="session-item">
+                    <div class="session-left">
+                        <span class="emoji">🌿</span>
+                        <div class="session-info">
+                            <span class="name">${escapeHtml(s.strain)}</span>
+                            <span class="meta">${new Date(s.timestamp).toLocaleDateString('es', {day:'2-digit',month:'short'})} · ${new Date(s.timestamp).toLocaleTimeString('es', {hour:'2-digit',minute:'2-digit'})}</span>
+                        </div>
+                    </div>
+                    <div class="session-right">
+                        <span class="weight">${s.weight.toFixed(1)}g</span>
+                        <span class="time">⚡${s.confidence}%</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+    }
+
+    function updateGreeting() {
+        const h = new Date().getHours();
+        let msg = 'Buenas tardes';
+        if (h < 12) msg = 'Buenos días';
+        else if (h < 20) msg = 'Buenas tardes';
+        else msg = 'Buenas noches';
+        greetingText.textContent = msg + ',';
+    }
+
+    function setDailyTip() {
+        const tips = [
+            'Escanea tu cogollo antes de consumir para registrar dosis precisas.',
+            'Registra tus efectos para conocer qué cepas te sientan mejor.',
+            'Mantén tus cogollos en frascos herméticos con Boveda 62%.',
+            'La tolerancia sube con el uso diario. Considera descansos de 48h.',
+            'Los terpenos se evaporan con el calor. Conserva en lugar fresco y oscuro.'
+        ];
+        dailyTip.textContent = tips[Math.floor(Math.random() * tips.length)];
+    }
+
+    function escapeHtml(t) {
+        const d = document.createElement('div');
+        d.textContent = t;
+        return d.innerHTML;
+    }
+
+    // --- DRAW OVERLAY ---
+    function drawOverlay() {
+        ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        if (resultPanel.classList.contains('hidden') && !isDemo && video.style.display !== 'none') {
+            const cx = overlayCanvas.width / 2;
+            const cy = overlayCanvas.height / 2 - 20;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 50, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(255,215,0,0.4)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([6, 8]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = 'rgba(255,215,0,0.08)';
+            ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+            ctx.font = '12px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('🪙 Coloca la moneda aquí', cx, cy + 80);
+        }
+        requestAnimationFrame(drawOverlay);
+    }
+
+    // --- EVENTOS ---
+    function bindEvents() {
+        // Navegación
+        $$('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                $$('.nav-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                $$('.tab-panel').forEach(p => p.classList.remove('active'));
+                document.getElementById(btn.dataset.tab).classList.add('active');
+                if (btn.dataset.tab === 'tab-scan') setTimeout(resizeCanvas, 300);
+            });
+        });
+
+        // Capturar
+        captureBtn.addEventListener('click', captureAndWeigh);
+
+        // Guardar
+        saveBtn.addEventListener('click', saveSession);
+
+        // Repetir
+        retakeBtn.addEventListener('click', () => {
+            resultPanel.classList.add('hidden');
+            state.currentWeight = 0;
+        });
+
+        // Filtros
+        $$('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                $$('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                state.filter = btn.dataset.filter;
+                renderJournal();
+            });
+        });
+
+        // Tolerancia
+        $$('.tol-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                $$('.tol-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                state.tolerance = btn.dataset.tol;
+                toleranceLevel.textContent = state.tolerance.charAt(0).toUpperCase() + state.tolerance.slice(1);
+                saveToStorage();
+            });
+        });
+
+        // Unidades
+        $$('.unit-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                $$('.unit-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                updateUI();
+            });
+        });
+
+        // Borrar
+        $('#clearDataBtn').addEventListener('click', () => {
+            if (confirm('⚠️ ¿Borrar todos los datos?')) {
+                state.sessions = [];
+                saveToStorage();
+                updateUI();
+            }
+        });
+
+        // Ver todas
+        $('#viewAllBtn').addEventListener('click', () => {
+            document.querySelector('[data-tab="tab-journal"]').click();
+        });
+    }
+
+    // --- INICIO ---
+    document.addEventListener('DOMContentLoaded', init);
+})();
