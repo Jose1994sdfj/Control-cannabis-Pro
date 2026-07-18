@@ -184,6 +184,23 @@ button:hover {
   transform: translateY(-1px);
 }
 
+.auth-buttons {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.auth-buttons button {
+  flex: 1;
+}
+
+#registerBtn {
+  background: var(--accent-primary);
+}
+
+#registerBtn:hover {
+  background: var(--accent-secondary);
+}
+
 /* ====== MENSAJES ====== */
 #loginMsg,
 #addMsg,
