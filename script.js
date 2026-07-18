@@ -9,19 +9,46 @@
    ========================================================================= */
 
 /* =========================
+   Firebase (Auth + Realtime Database)
+   ========================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyCx0uAVAMaYvrSye0fmSLD5wUxNDlCj8eE",
+  authDomain: "delta-corp-3bdc7.firebaseapp.com",
+  databaseURL: "https://delta-corp-3bdc7-default-rtdb.firebaseio.com",
+  projectId: "delta-corp-3bdc7",
+  storageBucket: "delta-corp-3bdc7.firebasestorage.app",
+  messagingSenderId: "751535947781",
+  appId: "1:751535947781:web:97126d73feecaf41d81c6c",
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
+
+/** Devuelve la referencia raíz de datos del usuario en la Realtime Database */
+function refUsuario(uid) {
+  return db.ref("usuarios/" + uid);
+}
+
+/* =========================
    Estado global y referencias
    ========================= */
 let registros = [];
-let usuarioActual = null;
+let datosSocialesCache = []; // caché en memoria de "desempenoSocial", sincronizada con Firebase
+let usuarioActual = null; // UID de Firebase Auth
+let usuarioEmail = null; // correo del usuario, para mostrar en UI/PDF
 
 // Tabs y secciones
 const tabs = document.querySelectorAll(".tabs button[data-tab]");
 const sections = document.querySelectorAll("main .tab");
 
 // Login
+const loginForm = document.getElementById("loginForm");
 const loginBtn = document.getElementById("loginBtn");
+const registerBtn = document.getElementById("registerBtn");
 const logoutBtn = document.getElementById("logoutBtn");
-const usernameInput = document.getElementById("usernameInput");
+const emailInput = document.getElementById("emailInput");
+const passwordInput = document.getElementById("passwordInput");
 const loginMsg = document.getElementById("loginMsg");
 
 // Agregar registro
@@ -142,8 +169,23 @@ function cerrarMenuMovil() {
 
 /** Limpia inputs de login */
 function limpiarLogin() {
-  if (usernameInput) usernameInput.value = "";
-  if (loginMsg) loginMsg.textContent = "";
+  if (emailInput) emailInput.value = "";
+  if (passwordInput) passwordInput.value = "";
+}
+
+/** Traduce códigos de error de Firebase Auth a mensajes legibles */
+function traducirErrorFirebase(err) {
+  const mensajes = {
+    "auth/invalid-email": "Correo electrónico no válido.",
+    "auth/user-not-found": "No existe una cuenta con ese correo.",
+    "auth/wrong-password": "Contraseña incorrecta.",
+    "auth/invalid-credential": "Correo o contraseña incorrectos.",
+    "auth/email-already-in-use": "Ya existe una cuenta con ese correo.",
+    "auth/weak-password": "La contraseña debe tener al menos 6 caracteres.",
+    "auth/too-many-requests": "Demasiados intentos. Intenta más tarde.",
+    "auth/network-request-failed": "Error de conexión. Revisa tu internet.",
+  };
+  return mensajes[err.code] || `Error: ${err.message}`;
 }
 
 /** Forzar resize de todos los gráficos visibles */
@@ -168,31 +210,73 @@ function debounce(fn, delay = 250) {
 }
 
 /* =========================
-   Persistencia (localStorage)
+   Persistencia (Firebase Realtime Database)
    ========================= */
-function guardarDatos() {
-  if (!usuarioActual) return;
-  localStorage.setItem("registros_" + usuarioActual, JSON.stringify(registros));
+
+/** Normaliza el valor devuelto por Firebase (puede venir como objeto u array) */
+function normalizarLista(val) {
+  if (!val) return [];
+  return Array.isArray(val) ? val : Object.values(val);
 }
 
+/** Guarda el array de registros de consumo en la Realtime Database */
+function guardarDatos() {
+  if (!usuarioActual) return;
+  refUsuario(usuarioActual)
+    .child("registros")
+    .set(registros)
+    .catch((e) => console.error("Error guardando registros:", e));
+}
+
+/** Carga los registros de consumo desde la Realtime Database (asíncrono) */
 function cargarDatos() {
   if (!usuarioActual) {
     registros = [];
-    return;
+    return Promise.resolve();
   }
-  const datos = localStorage.getItem("registros_" + usuarioActual);
-  registros = datos ? JSON.parse(datos) : [];
+  return refUsuario(usuarioActual)
+    .child("registros")
+    .once("value")
+    .then((snap) => {
+      registros = normalizarLista(snap.val());
+    })
+    .catch((e) => {
+      console.error("Error cargando registros:", e);
+      registros = [];
+    });
 }
 
+/** Devuelve la caché en memoria de datos de bienestar/desempeño social (síncrono) */
 function cargarDatosSocial() {
-  if (!usuarioActual) return [];
-  const datosSocial = localStorage.getItem("desempenoSocial_" + usuarioActual);
-  return datosSocial ? JSON.parse(datosSocial) : [];
+  return datosSocialesCache;
 }
 
+/** Guarda el array de bienestar/desempeño social en la Realtime Database y actualiza la caché */
 function guardarDatosSocial(data) {
+  datosSocialesCache = data;
   if (!usuarioActual) return;
-  localStorage.setItem("desempenoSocial_" + usuarioActual, JSON.stringify(data));
+  refUsuario(usuarioActual)
+    .child("desempenoSocial")
+    .set(data)
+    .catch((e) => console.error("Error guardando bienestar:", e));
+}
+
+/** Carga los datos de bienestar/desempeño social desde Firebase hacia la caché (asíncrono) */
+function cargarDatosSocialRemoto() {
+  if (!usuarioActual) {
+    datosSocialesCache = [];
+    return Promise.resolve();
+  }
+  return refUsuario(usuarioActual)
+    .child("desempenoSocial")
+    .once("value")
+    .then((snap) => {
+      datosSocialesCache = normalizarLista(snap.val());
+    })
+    .catch((e) => {
+      console.error("Error cargando bienestar:", e);
+      datosSocialesCache = [];
+    });
 }
 
 /* =========================
@@ -1146,7 +1230,7 @@ function exportarPDF() {
     doc.text("🌿 Control Cannabis Pro", 105, 20, { align: "center" });
     
     doc.setFontSize(14);
-    doc.text(`Reporte Completo de ${usuarioActual}`, 105, 30, { align: "center" });
+    doc.text(`Reporte Completo de ${usuarioEmail || "Usuario"}`, 105, 30, { align: "center" });
     
     doc.setFontSize(10);
     doc.setTextColor(0, 0, 0);
@@ -1256,11 +1340,12 @@ function exportarPDF() {
     // Footer
     doc.setFontSize(8);
     doc.setTextColor(100, 100, 100);
-    doc.text(`© 2025 Control Cannabis Pro - ${usuarioActual}`, 105, 280, { align: "center" });
+    doc.text(`© 2025 Control Cannabis Pro - ${usuarioEmail || "Usuario"}`, 105, 280, { align: "center" });
     doc.text("Desarrollado por JJ Solutions - Tecnología e Innovación", 105, 285, { align: "center" });
     
     // Descargar automáticamente
-    const nombreArchivo = `Reporte_Cannabis_${usuarioActual}_${new Date().toISOString().slice(0, 10)}.pdf`;
+    const nombreArchivoBase = (usuarioEmail || "usuario").split("@")[0].replace(/[^a-zA-Z0-9_-]/g, "_");
+    const nombreArchivo = `Reporte_Cannabis_${nombreArchivoBase}_${new Date().toISOString().slice(0, 10)}.pdf`;
     doc.save(nombreArchivo);
     
     // Mensaje de éxito
@@ -1837,42 +1922,110 @@ tabs.forEach((btn) => {
   });
 });
 
-// Login
-if (loginBtn) {
-  loginBtn.addEventListener("click", () => {
-    const user = (usernameInput?.value || "").trim();
-    if (!user) {
-      if (loginMsg) loginMsg.textContent = "Por favor ingresa un nombre de usuario.";
+// Login (envío del formulario con correo/contraseña)
+if (loginForm) {
+  loginForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const email = (emailInput?.value || "").trim();
+    const password = passwordInput?.value || "";
+
+    if (!email || !password) {
+      if (loginMsg) loginMsg.textContent = "Ingresa tu correo y contraseña.";
       return;
     }
-    usuarioActual = user;
-    if (loginMsg) loginMsg.textContent = `¡Bienvenido, ${usuarioActual}!`;
-    localStorage.setItem("usuarioActual", usuarioActual);
-    cargarDatos();
-    activarTabs(true);
-    cambiarTab("dashboard-tab");
-    limpiarLogin();
-    actualizarUI();
+
+    if (loginMsg) loginMsg.textContent = "Iniciando sesión...";
+    if (loginBtn) loginBtn.disabled = true;
+
+    auth
+      .signInWithEmailAndPassword(email, password)
+      .catch((err) => {
+        if (loginMsg) loginMsg.textContent = traducirErrorFirebase(err);
+      })
+      .finally(() => {
+        if (loginBtn) loginBtn.disabled = false;
+      });
   });
 }
+
+// Crear cuenta
+if (registerBtn) {
+  registerBtn.addEventListener("click", () => {
+    const email = (emailInput?.value || "").trim();
+    const password = passwordInput?.value || "";
+
+    if (!email || !password) {
+      if (loginMsg) loginMsg.textContent = "Ingresa un correo y contraseña para crear tu cuenta.";
+      return;
+    }
+    if (password.length < 6) {
+      if (loginMsg) loginMsg.textContent = "La contraseña debe tener al menos 6 caracteres.";
+      return;
+    }
+
+    if (loginMsg) loginMsg.textContent = "Creando cuenta...";
+    registerBtn.disabled = true;
+
+    auth
+      .createUserWithEmailAndPassword(email, password)
+      .catch((err) => {
+        if (loginMsg) loginMsg.textContent = traducirErrorFirebase(err);
+      })
+      .finally(() => {
+        registerBtn.disabled = false;
+      });
+  });
+}
+
+/** Se ejecuta cuando Firebase Auth detecta una sesión iniciada */
+async function manejarSesionIniciada(user) {
+  usuarioActual = user.uid;
+  usuarioEmail = user.email;
+  if (loginMsg) loginMsg.textContent = `¡Bienvenido, ${usuarioEmail}!`;
+
+  activarTabs(true);
+  cambiarTab("dashboard-tab");
+  limpiarLogin();
+
+  await Promise.all([cargarDatos(), cargarDatosSocialRemoto()]);
+  actualizarUI();
+  setTimeout(resizeAllCharts, 50);
+}
+
+/** Se ejecuta cuando Firebase Auth detecta que no hay sesión (o se cerró) */
+function manejarSesionCerrada() {
+  usuarioActual = null;
+  usuarioEmail = null;
+  registros = [];
+  datosSocialesCache = [];
+
+  activarTabs(false);
+  cambiarTab("login-tab");
+  if (recordsList) recordsList.innerHTML = "";
+  if (recomendacionesBox) recomendacionesBox.innerHTML = "";
+  if (loginMsg) loginMsg.textContent = "";
+
+  // destruir gráficos
+  [chartSatisfaccion, chartConsumoMensual, chartCostoGramo, chartMetodo, chartMotivo, chartDesempenoSocial, chartSocialTendencia, chartDashboard]
+    .forEach((ch) => {
+      try { if (ch) ch.destroy(); } catch (e) {}
+    });
+  chartSatisfaccion = chartConsumoMensual = chartCostoGramo = chartMetodo = chartMotivo = chartDesempenoSocial = chartSocialTendencia = chartDashboard = null;
+}
+
+// Escucha los cambios de sesión de Firebase Auth (login, logout, y sesión persistente al recargar)
+auth.onAuthStateChanged((user) => {
+  if (user) {
+    manejarSesionIniciada(user);
+  } else {
+    manejarSesionCerrada();
+  }
+});
 
 // Logout
 if (logoutBtn) {
   logoutBtn.addEventListener("click", () => {
-    usuarioActual = null;
-    localStorage.removeItem("usuarioActual");
-    registros = [];
-    activarTabs(false);
-    cambiarTab("login-tab");
-    if (recordsList) recordsList.innerHTML = "";
-    if (recomendacionesBox) recomendacionesBox.innerHTML = "";
-    if (loginMsg) loginMsg.textContent = "";
-    // destruir gráficos
-    [chartSatisfaccion, chartConsumoMensual, chartCostoGramo, chartMetodo, chartMotivo, chartDesempenoSocial, chartSocialTendencia, chartDashboard]
-      .forEach((ch) => {
-        try { if (ch) ch.destroy(); } catch (e) {}
-      });
-    chartSatisfaccion = chartConsumoMensual = chartCostoGramo = chartMetodo = chartMotivo = chartDesempenoSocial = chartSocialTendencia = chartDashboard = null;
+    auth.signOut();
   });
 }
 
@@ -1975,20 +2128,7 @@ mobileNavButtons.forEach((btn) => {
 // Logout móvil
 if (logoutBtnMobile) {
   logoutBtnMobile.addEventListener("click", () => {
-    usuarioActual = null;
-    localStorage.removeItem("usuarioActual");
-    registros = [];
-    activarTabs(false);
-    cambiarTab("login-tab");
-    if (recordsList) recordsList.innerHTML = "";
-    if (recomendacionesBox) recomendacionesBox.innerHTML = "";
-    if (loginMsg) loginMsg.textContent = "";
-    // destruir gráficos
-    [chartSatisfaccion, chartConsumoMensual, chartCostoGramo, chartMetodo, chartMotivo, chartDesempenoSocial, chartSocialTendencia, chartDashboard]
-      .forEach((ch) => {
-        try { if (ch) ch.destroy(); } catch (e) {}
-      });
-    chartSatisfaccion = chartConsumoMensual = chartCostoGramo = chartMetodo = chartMotivo = chartDesempenoSocial = chartSocialTendencia = chartDashboard = null;
+    auth.signOut();
   });
 }
 
@@ -2009,16 +2149,10 @@ if (exportPDFBtn) {
    ========================= */
 window.addEventListener("load", () => {
   aplicarTemaGuardado();
-  usuarioActual = localStorage.getItem("usuarioActual");
-  if (usuarioActual) {
-    activarTabs(true);
-    cambiarTab("dashboard-tab");
-    cargarDatos();
-    actualizarUI();
-  } else {
-    activarTabs(false);
-    cambiarTab("login-tab");
-  }
+
+  // El estado de la pestaña de login/tabs y la carga de datos se maneja
+  // en auth.onAuthStateChanged, que se dispara automáticamente al cargar
+  // la página (con o sin sesión activa).
 
   // Mostrar botón de tema siempre
   if (themeToggle) {
