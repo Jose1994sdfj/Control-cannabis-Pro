@@ -10,13 +10,15 @@
 </head>
 <body>
 
-<!-- ========== SPLASH ========== -->
-<div id="splash-overlay" class="splash">
-    <div class="splash-content">
-        <div class="splash-icon">⚖️</div>
-        <h1>Weigh & Flow</h1>
-        <p id="splashStatus">Cargando...</p>
-        <div class="loader-bar"><div class="loader-fill" id="loaderFill"></div></div>
+<!-- ========== SPLASH SIMPLE ========== -->
+<div id="splash" style="position:fixed;inset:0;z-index:9999;background:#0a0a0f;display:flex;align-items:center;justify-content:center;flex-direction:column;transition:opacity 0.6s;">
+    <div style="text-align:center;">
+        <div style="font-size:64px;margin-bottom:16px;">⚖️</div>
+        <h1 style="font-family:'Inter',sans-serif;font-size:32px;font-weight:700;background:linear-gradient(135deg,#8b7cf7,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Weigh & Flow</h1>
+        <p style="font-family:'Inter',sans-serif;color:#a8a4c0;font-size:14px;margin-top:8px;" id="splashText">Cargando...</p>
+        <div style="width:200px;height:4px;background:#14141e;border-radius:4px;overflow:hidden;margin:20px auto 0;">
+            <div id="loaderBar" style="height:100%;width:0%;background:linear-gradient(90deg,#8b7cf7,#a78bfa);border-radius:4px;transition:width 0.3s;"></div>
+        </div>
     </div>
 </div>
 
@@ -103,7 +105,7 @@
     <section id="tab-scan" class="tab-panel">
         <header class="panel-header">
             <h2>📸 Escáner de peso</h2>
-            <span class="sub-greeting">Coloca un cogollo junto a una moneda de 1€/1$</span>
+            <span class="sub-greeting" id="scanStatus">Coloca un cogollo junto a una moneda de 1€/1$</span>
         </header>
 
         <div class="scanner-container">
@@ -112,11 +114,9 @@
                 <canvas id="overlayCanvas"></canvas>
                 <div class="scan-guide" id="scanGuide">
                     <div class="guide-box" id="guideBox">
-                        <span class="guide-text">📷 Coloca la moneda AQUÍ</span>
+                        <span style="font-size:40px;">📷</span>
+                        <span style="font-size:14px;color:var(--text-secondary);margin-top:8px;" id="guideText">Presiona el botón 📷 para escanear</span>
                         <div class="coin-reference"></div>
-                        <button id="demoModeBtn" class="demo-btn" style="margin-top:16px;background:rgba(139,124,247,0.2);border:1px solid rgba(139,124,247,0.3);color:#fff;padding:8px 20px;border-radius:40px;font-family:inherit;cursor:pointer;font-size:13px;pointer-events:auto;">
-                            🧪 Usar modo demo
-                        </button>
                     </div>
                 </div>
                 <button class="capture-btn" id="captureBtn">
