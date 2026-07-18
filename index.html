@@ -3,11 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Control Consumo Cannabis Pro</title>
+  <title>Bitácora Cannabis</title>
   <link rel="stylesheet" href="style.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
   <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#161b22" />
+  <meta name="theme-color" content="#141712" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192x192.png" />
   <link rel="apple-touch-icon" href="icon-192x192.png" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -19,51 +21,43 @@
 </head>
 <body>
   <header>
-    <h1>Control Consumo Cannabis Pro <span class="beta-badge">BETA</span></h1>
+    <div class="header-row">
+      <h1>🌿 Bitácora Cannabis <span class="beta-badge">BETA</span></h1>
+      <div class="session-cluster">
+        <button id="themeToggle" aria-label="Cambiar tema">🌙</button>
+        <button id="logoutBtn" hidden aria-label="Cerrar sesión">Salir</button>
+      </div>
+    </div>
+    <!-- Franja de bienestar: su tono ambiental refleja tu promedio reciente de ánimo/estrés -->
+    <div id="wellbeingStrip" class="wellbeing-strip" aria-hidden="true"></div>
   </header>
 
-  <!-- Navegación -->
-  <div class="tabs-container">
-    <!-- Barra de pestañas normal (desktop) -->
-    <div class="tabs">
-      <button data-tab="login-tab">Iniciar Sesión</button>
-      <button data-tab="dashboard-tab" disabled>📊 Dashboard</button>
-      <button data-tab="add-tab" disabled>Agregar</button>
-      <button data-tab="view-tab" disabled>Registros</button>
-      <button data-tab="stats-tab" disabled>Estadísticas</button>
-      <button data-tab="rec-tab" disabled>Recomendaciones</button>
-      <button data-tab="social-tab" disabled>Desempeño Social</button>
-      <button id="themeToggle">🌙</button>
-      <button id="logoutBtn" hidden>🔒 Cerrar sesión</button>
-    </div>
+  <!-- Navegación: una sola barra, con scroll horizontal en pantallas angostas -->
+  <nav class="tabs" id="tabsNav">
+    <button data-tab="login-tab" class="active">🔑 <span>Iniciar sesión</span></button>
+    <button data-tab="dashboard-tab" disabled>📊 <span>Dashboard</span></button>
+    <button data-tab="add-tab" disabled>➕ <span>Agregar</span></button>
+    <button data-tab="view-tab" disabled>📋 <span>Registros</span></button>
+    <button data-tab="stats-tab" disabled>📈 <span>Estadísticas</span></button>
+    <button data-tab="rec-tab" disabled>💡 <span>Recomendaciones</span></button>
+    <button data-tab="social-tab" disabled>🤝 <span>Bienestar</span></button>
+  </nav>
 
-    <!-- Menú hamburguesa (móvil) -->
-    <button class="hamburger-menu" id="hamburgerBtn">
-      ☰ Menú
-    </button>
-
-    <!-- Navegación móvil -->
-    <div class="mobile-nav" id="mobileNav">
-      <button data-tab="login-tab">🔑 Iniciar Sesión</button>
-      <button data-tab="dashboard-tab" disabled>📊 Dashboard</button>
-      <button data-tab="add-tab" disabled>➕ Agregar Registro</button>
-      <button data-tab="view-tab" disabled>📋 Ver Registros</button>
-      <button data-tab="stats-tab" disabled>📈 Estadísticas</button>
-      <button data-tab="rec-tab" disabled>💡 Recomendaciones</button>
-      <button data-tab="social-tab" disabled>🤝 Desempeño Social</button>
-      <button id="themeToggleMobile">🌙 Cambiar Tema</button>
-      <button id="logoutBtnMobile" hidden>🔒 Cerrar Sesión</button>
-    </div>
-  </div>
+  <!-- Acceso rápido flotante para agregar un registro desde cualquier pestaña -->
+  <button id="fabAdd" class="fab-add" hidden aria-label="Agregar registro">➕</button>
 
   <main>
     <!-- Iniciar sesión -->
     <section id="login-tab" class="tab active">
+      <div class="login-intro">
+        <h2>Tu bitácora personal</h2>
+        <p>Registra, entiende tus patrones y ve cómo te sientes con el tiempo. Solo tú puedes ver tus datos.</p>
+      </div>
       <form id="loginForm">
-        <label for="emailInput">Correo electrónico:</label>
+        <label for="emailInput">Correo electrónico</label>
         <input type="email" id="emailInput" autocomplete="email" required />
 
-        <label for="passwordInput">Contraseña:</label>
+        <label for="passwordInput">Contraseña</label>
         <input type="password" id="passwordInput" autocomplete="current-password" minlength="6" required />
 
         <div class="auth-buttons">
@@ -72,6 +66,7 @@
         </div>
         <div id="loginMsg"></div>
       </form>
+      <p class="login-privacy">🔒 Tus registros se guardan en tu cuenta y no se comparten con nadie.</p>
     </section>
 
     <!-- Dashboard -->
@@ -79,15 +74,15 @@
       <h2>📊 Dashboard - Resumen Ejecutivo</h2>
 
       <div class="dashboard-grid">
-        <!-- Tarjetas de métricas -->
+        <!-- Tarjetas de métricas: el bienestar va primero, no el gasto -->
         <div class="metric-card">
-          <h3>Total Registros</h3>
-          <div class="metric-value" id="totalRegistros">0</div>
+          <h3>Satisfacción Promedio</h3>
+          <div class="metric-value" id="satisfaccionPromedio">0/10</div>
         </div>
 
         <div class="metric-card">
-          <h3>Gasto Total</h3>
-          <div class="metric-value" id="gastoTotal">$0</div>
+          <h3>Total Registros</h3>
+          <div class="metric-value" id="totalRegistros">0</div>
         </div>
 
         <div class="metric-card">
@@ -96,8 +91,8 @@
         </div>
 
         <div class="metric-card">
-          <h3>Satisfacción Promedio</h3>
-          <div class="metric-value" id="satisfaccionPromedio">0/10</div>
+          <h3>Gasto Total</h3>
+          <div class="metric-value" id="gastoTotal">$0</div>
         </div>
       </div>
 
