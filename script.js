@@ -9,46 +9,19 @@
    ========================================================================= */
 
 /* =========================
-   Firebase (Auth + Realtime Database)
-   ========================= */
-const firebaseConfig = {
-  apiKey: "AIzaSyCx0uAVAMaYvrSye0fmSLD5wUxNDlCj8eE",
-  authDomain: "delta-corp-3bdc7.firebaseapp.com",
-  databaseURL: "https://delta-corp-3bdc7-default-rtdb.firebaseio.com",
-  projectId: "delta-corp-3bdc7",
-  storageBucket: "delta-corp-3bdc7.firebasestorage.app",
-  messagingSenderId: "751535947781",
-  appId: "1:751535947781:web:97126d73feecaf41d81c6c",
-};
-
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.database();
-
-/** Devuelve la referencia raíz de datos del usuario en la Realtime Database */
-function refUsuario(uid) {
-  return db.ref("usuarios/" + uid);
-}
-
-/* =========================
    Estado global y referencias
    ========================= */
 let registros = [];
-let datosSocialesCache = []; // caché en memoria de "desempenoSocial", sincronizada con Firebase
-let usuarioActual = null; // UID de Firebase Auth
-let usuarioEmail = null; // correo del usuario, para mostrar en UI/PDF
+let usuarioActual = null;
 
 // Tabs y secciones
 const tabs = document.querySelectorAll(".tabs button[data-tab]");
 const sections = document.querySelectorAll("main .tab");
 
 // Login
-const loginForm = document.getElementById("loginForm");
 const loginBtn = document.getElementById("loginBtn");
-const registerBtn = document.getElementById("registerBtn");
 const logoutBtn = document.getElementById("logoutBtn");
-const emailInput = document.getElementById("emailInput");
-const passwordInput = document.getElementById("passwordInput");
+const usernameInput = document.getElementById("usernameInput");
 const loginMsg = document.getElementById("loginMsg");
 
 // Agregar registro
@@ -81,13 +54,16 @@ let chartDashboard = null;
 // Theme toggle
 const themeToggle = document.getElementById("themeToggle");
 
-// Franja de bienestar y acceso rápido
-const wellbeingStrip = document.getElementById("wellbeingStrip");
-const fabAdd = document.getElementById("fabAdd");
-
 // Export PDF
 const exportPDFBtn = document.getElementById("exportPDFBtn");
 const exportMsg = document.getElementById("exportMsg");
+
+// Menú hamburguesa
+const hamburgerBtn = document.getElementById("hamburgerBtn");
+const mobileNav = document.getElementById("mobileNav");
+const mobileNavButtons = document.querySelectorAll(".mobile-nav button[data-tab]");
+const themeToggleMobile = document.getElementById("themeToggleMobile");
+const logoutBtnMobile = document.getElementById("logoutBtnMobile");
 
 /* =========================
    Utilidades
@@ -103,6 +79,7 @@ function ctxOf(id) {
 
 /** Activa o desactiva tabs (excepto login) y muestra/oculta logout */
 function activarTabs(estado) {
+  // Tabs desktop
   tabs.forEach((btn) => {
     if (btn.getAttribute("data-tab") !== "login-tab") btn.disabled = !estado;
   });
@@ -113,27 +90,35 @@ function activarTabs(estado) {
   if (themeToggle) {
     themeToggle.hidden = false;
   }
-  // El botón flotante de acceso rápido solo tiene sentido con sesión iniciada
-  if (fabAdd && !estado) {
-    fabAdd.hidden = true;
+
+  // Tabs móvil
+  mobileNavButtons.forEach((btn) => {
+    if (btn.getAttribute("data-tab") !== "login-tab") btn.disabled = !estado;
+  });
+  if (logoutBtnMobile) {
+    logoutBtnMobile.hidden = !estado;
   }
 }
 
 /** Cambia la pestaña visible y dispara resize de gráficos si corresponde */
 function cambiarTab(tabId) {
+  // Activar botón correcto en desktop
   tabs.forEach((b) => b.classList.remove("active"));
   sections.forEach((s) => s.classList.remove("active"));
 
   const btn = Array.from(tabs).find((b) => b.getAttribute("data-tab") === tabId);
   if (btn) btn.classList.add("active");
 
+  // Activar botón correcto en móvil
+  mobileNavButtons.forEach((b) => b.classList.remove("active"));
+  const mobileBtn = Array.from(mobileNavButtons).find((b) => b.getAttribute("data-tab") === tabId);
+  if (mobileBtn) mobileBtn.classList.add("active");
+
   const sec = Array.from(sections).find((s) => s.id === tabId);
   if (sec) sec.classList.add("active");
 
-  // El FAB de "Agregar" se oculta en login y en la propia pestaña de agregar
-  if (fabAdd) {
-    fabAdd.hidden = !usuarioActual || tabId === "login-tab" || tabId === "add-tab";
-  }
+  // Cerrar menú móvil al cambiar tab
+  cerrarMenuMovil();
 
   // Al mostrar una sección con gráficos, forzamos resize después del reflow
   if (tabId === "stats-tab" || tabId === "social-tab" || tabId === "dashboard-tab") {
@@ -141,25 +126,24 @@ function cambiarTab(tabId) {
   }
 }
 
-/** Limpia inputs de login */
-function limpiarLogin() {
-  if (emailInput) emailInput.value = "";
-  if (passwordInput) passwordInput.value = "";
+/** Alterna la visibilidad del menú hamburguesa */
+function toggleMenuMovil() {
+  if (mobileNav) {
+    mobileNav.classList.toggle("show");
+  }
 }
 
-/** Traduce códigos de error de Firebase Auth a mensajes legibles */
-function traducirErrorFirebase(err) {
-  const mensajes = {
-    "auth/invalid-email": "Correo electrónico no válido.",
-    "auth/user-not-found": "No existe una cuenta con ese correo.",
-    "auth/wrong-password": "Contraseña incorrecta.",
-    "auth/invalid-credential": "Correo o contraseña incorrectos.",
-    "auth/email-already-in-use": "Ya existe una cuenta con ese correo.",
-    "auth/weak-password": "La contraseña debe tener al menos 6 caracteres.",
-    "auth/too-many-requests": "Demasiados intentos. Intenta más tarde.",
-    "auth/network-request-failed": "Error de conexión. Revisa tu internet.",
-  };
-  return mensajes[err.code] || `Error: ${err.message}`;
+/** Cierra el menú móvil */
+function cerrarMenuMovil() {
+  if (mobileNav) {
+    mobileNav.classList.remove("show");
+  }
+}
+
+/** Limpia inputs de login */
+function limpiarLogin() {
+  if (usernameInput) usernameInput.value = "";
+  if (loginMsg) loginMsg.textContent = "";
 }
 
 /** Forzar resize de todos los gráficos visibles */
@@ -184,73 +168,31 @@ function debounce(fn, delay = 250) {
 }
 
 /* =========================
-   Persistencia (Firebase Realtime Database)
+   Persistencia (localStorage)
    ========================= */
-
-/** Normaliza el valor devuelto por Firebase (puede venir como objeto u array) */
-function normalizarLista(val) {
-  if (!val) return [];
-  return Array.isArray(val) ? val : Object.values(val);
-}
-
-/** Guarda el array de registros de consumo en la Realtime Database */
 function guardarDatos() {
   if (!usuarioActual) return;
-  refUsuario(usuarioActual)
-    .child("registros")
-    .set(registros)
-    .catch((e) => console.error("Error guardando registros:", e));
+  localStorage.setItem("registros_" + usuarioActual, JSON.stringify(registros));
 }
 
-/** Carga los registros de consumo desde la Realtime Database (asíncrono) */
 function cargarDatos() {
   if (!usuarioActual) {
     registros = [];
-    return Promise.resolve();
+    return;
   }
-  return refUsuario(usuarioActual)
-    .child("registros")
-    .once("value")
-    .then((snap) => {
-      registros = normalizarLista(snap.val());
-    })
-    .catch((e) => {
-      console.error("Error cargando registros:", e);
-      registros = [];
-    });
+  const datos = localStorage.getItem("registros_" + usuarioActual);
+  registros = datos ? JSON.parse(datos) : [];
 }
 
-/** Devuelve la caché en memoria de datos de bienestar/desempeño social (síncrono) */
 function cargarDatosSocial() {
-  return datosSocialesCache;
+  if (!usuarioActual) return [];
+  const datosSocial = localStorage.getItem("desempenoSocial_" + usuarioActual);
+  return datosSocial ? JSON.parse(datosSocial) : [];
 }
 
-/** Guarda el array de bienestar/desempeño social en la Realtime Database y actualiza la caché */
 function guardarDatosSocial(data) {
-  datosSocialesCache = data;
   if (!usuarioActual) return;
-  refUsuario(usuarioActual)
-    .child("desempenoSocial")
-    .set(data)
-    .catch((e) => console.error("Error guardando bienestar:", e));
-}
-
-/** Carga los datos de bienestar/desempeño social desde Firebase hacia la caché (asíncrono) */
-function cargarDatosSocialRemoto() {
-  if (!usuarioActual) {
-    datosSocialesCache = [];
-    return Promise.resolve();
-  }
-  return refUsuario(usuarioActual)
-    .child("desempenoSocial")
-    .once("value")
-    .then((snap) => {
-      datosSocialesCache = normalizarLista(snap.val());
-    })
-    .catch((e) => {
-      console.error("Error cargando bienestar:", e);
-      datosSocialesCache = [];
-    });
+  localStorage.setItem("desempenoSocial_" + usuarioActual, JSON.stringify(data));
 }
 
 /* =========================
@@ -266,41 +208,6 @@ function actualizarUI() {
   inicializarGraficoSocialTendencia();
   mostrarSocialInsights();
   inicializarGraficoDashboard();
-  actualizarFranjaBienestar();
-}
-
-/**
- * Colorea la franja ambiental bajo el encabezado según el promedio de
- * ánimo/estrés de tus últimas evaluaciones de bienestar. Es puramente
- * informativo: musgo cuando el balance reciente es bueno, arcilla cuando
- * conviene prestarle atención. Si no hay datos, se queda neutral.
- */
-function actualizarFranjaBienestar() {
-  if (!wellbeingStrip) return;
-
-  const datosSocial = cargarDatosSocial();
-  if (!datosSocial || datosSocial.length === 0) {
-    wellbeingStrip.style.background =
-      "linear-gradient(90deg, var(--border-color), var(--border-color))";
-    return;
-  }
-
-  const recientes = datosSocial.slice(-5);
-  const promedio = (campo, invertir = false) => {
-    const vals = recientes.map((d) => Number(d[campo]) || 5);
-    const media = vals.reduce((a, b) => a + b, 0) / vals.length;
-    return invertir ? 11 - media : media;
-  };
-
-  // Balance de bienestar 1-10: ánimo y sueño suman, estrés resta (invertido)
-  const balance =
-    (promedio("estadoAnimo") + promedio("calidadSueno") + promedio("niveleEstres", true)) / 3;
-
-  // Interpola entre arcilla (bajo) y musgo (alto)
-  const t = Math.max(0, Math.min(1, (balance - 3) / 6));
-  const colorBajo = "#c98a4b";
-  const colorAlto = "#8fae72";
-  wellbeingStrip.style.background = `linear-gradient(90deg, ${colorBajo}, ${colorAlto} ${Math.round(t * 100)}%)`;
 }
 
 /** Actualiza las métricas del dashboard */
@@ -826,7 +733,7 @@ function inicializarGraficos() {
   // 1) Satisfacción mensual promedio
   const ctxSat = ctxOf("graficoSatisfaccion");
   if (ctxSat) {
-    const gradientSat = crearGradienteVertical(ctxSat, "#00ffea", "#007acc");
+    const gradientSat = crearGradienteVertical(ctxSat, "#9CB380", "#1B241A");
     const meses = mesesOrdenados();
     const satPorMes = meses.map((mes) => {
       const regs = registros.filter((r) => r.fecha.slice(0, 7) === mes);
@@ -842,13 +749,13 @@ function inicializarGraficos() {
           {
             label: "Satisfacción Promedio",
             data: satPorMes,
-            borderColor: "#00ffe7",
+            borderColor: "#9CB380",
             backgroundColor: gradientSat,
             fill: true,
             tension: 0.4,
             pointRadius: 5,
             pointHoverRadius: 7,
-            pointBackgroundColor: "#00ffe7",
+            pointBackgroundColor: "#9CB380",
             borderWidth: 2,
           },
         ],
@@ -860,18 +767,18 @@ function inicializarGraficos() {
           y: {
             min: 0,
             max: 10,
-            grid: { borderDash: [5, 5], color: "#00ffe7aa" },
-            ticks: { color: "#00ffe7" },
+            grid: { borderDash: [5, 5], color: "#9CB38055" },
+            ticks: { color: "#9CB380" },
           },
           x: {
             grid: { display: false },
-            ticks: { color: "#00ffe7" },
+            ticks: { color: "#9CB380" },
           },
         },
         plugins: {
-          legend: { labels: { color: "#00ffe7" } },
+          legend: { labels: { color: "#9CB380" } },
           tooltip: {
-            backgroundColor: "#00ffe7cc",
+            backgroundColor: "#9CB380cc",
             titleColor: "#000",
             bodyColor: "#000",
             cornerRadius: 10,
@@ -889,7 +796,7 @@ function inicializarGraficos() {
     const consumoMensual = calcularConsumoMensual();
     const labels = Object.keys(consumoMensual).sort();
     const dataVals = labels.map((m) => consumoMensual[m]);
-    const grad = crearGradienteVertical(ctxCons, "#ff00ff", "#800080");
+    const grad = crearGradienteVertical(ctxCons, "#D9A24B", "#3A2A12");
 
     chartConsumoMensual = new Chart(ctxCons, {
       type: "bar",
@@ -902,7 +809,7 @@ function inicializarGraficos() {
             backgroundColor: grad,
             borderRadius: 10,
             borderSkipped: false,
-            hoverBackgroundColor: "#ff6fff",
+            hoverBackgroundColor: "#E8B368",
             barPercentage: 0.7,
           },
         ],
@@ -913,18 +820,18 @@ function inicializarGraficos() {
         scales: {
           y: {
             beginAtZero: true,
-            grid: { borderDash: [3, 3], color: "#ff00ffaa" },
-            ticks: { color: "#ff00ff" },
+            grid: { borderDash: [3, 3], color: "#D9A24B55" },
+            ticks: { color: "#D9A24B" },
           },
           x: {
             grid: { display: false },
-            ticks: { color: "#ff00ff" },
+            ticks: { color: "#D9A24B" },
           },
         },
         plugins: {
-          legend: { labels: { color: "#ff00ff" } },
+          legend: { labels: { color: "#D9A24B" } },
           tooltip: {
-            backgroundColor: "#ff00ffcc",
+            backgroundColor: "#D9A24Bcc",
             titleColor: "#000",
             bodyColor: "#000",
             cornerRadius: 6,
@@ -942,7 +849,7 @@ function inicializarGraficos() {
     const costoProm = calcularCostoPromedioPorGramo();
     const labels = Object.keys(costoProm).sort();
     const dataVals = labels.map((m) => costoProm[m]);
-    const grad = crearGradienteVertical(ctxCosto, "#00ff00", "#006600");
+    const grad = crearGradienteVertical(ctxCosto, "#6FA8A0", "#16302C");
 
     chartCostoGramo = new Chart(ctxCosto, {
       type: "line",
@@ -952,7 +859,7 @@ function inicializarGraficos() {
           {
             label: "Costo promedio por gramo ($)",
             data: dataVals,
-            borderColor: "#00ff00",
+            borderColor: "#6FA8A0",
             backgroundColor: grad,
             fill: true,
             tension: 0.3,
@@ -968,18 +875,18 @@ function inicializarGraficos() {
         scales: {
           y: {
             beginAtZero: true,
-            grid: { color: "#00ff0077", borderDash: [4, 4] },
-            ticks: { color: "#00ff00" },
+            grid: { color: "#6FA8A055", borderDash: [4, 4] },
+            ticks: { color: "#6FA8A0" },
           },
           x: {
-            ticks: { color: "#00ff00" },
+            ticks: { color: "#6FA8A0" },
             grid: { display: false },
           },
         },
         plugins: {
-          legend: { labels: { color: "#00ff00" } },
+          legend: { labels: { color: "#6FA8A0" } },
           tooltip: {
-            backgroundColor: "#00ff0077",
+            backgroundColor: "#6FA8A055",
             titleColor: "#000",
             bodyColor: "#000",
             cornerRadius: 5,
@@ -997,7 +904,7 @@ function inicializarGraficos() {
     const frecMetodo = calcularFrecuenciaPorMetodo();
     const labels = Object.keys(frecMetodo).map((m) => m.charAt(0).toUpperCase() + m.slice(1));
     const dataVals = Object.values(frecMetodo);
-    const coloresMetodo = ["#ff6384", "#36a2eb", "#ffce56", "#4bc0c0", "#9966ff", "#ff9f40"];
+    const coloresMetodo = ["#9CB380", "#D9A24B", "#C9694F", "#6FA8A0", "#A78BC9", "#E0C68C"];
 
     chartMetodo = new Chart(ctxMetodo, {
       type: "doughnut",
@@ -1007,7 +914,7 @@ function inicializarGraficos() {
           {
             data: dataVals,
             backgroundColor: coloresMetodo,
-            borderColor: "#0d1117",
+            borderColor: "#12180F",
             borderWidth: 2,
           },
         ],
@@ -1016,9 +923,9 @@ function inicializarGraficos() {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { position: "right", labels: { color: "#79c0ff" } },
+          legend: { position: "right", labels: { color: "#9CB380" } },
           tooltip: {
-            backgroundColor: "#79c0ffcc",
+            backgroundColor: "#9CB380cc",
             titleColor: "#000",
             bodyColor: "#000",
             cornerRadius: 6,
@@ -1036,7 +943,7 @@ function inicializarGraficos() {
     const satMotivo = calcularSatisfaccionPorMotivo();
     const labels = Object.keys(satMotivo).map((m) => m.charAt(0).toUpperCase() + m.slice(1));
     const dataVals = Object.values(satMotivo);
-    const grad = crearGradienteVertical(ctxMotivo, "#ff4500", "#ffa500");
+    const grad = crearGradienteVertical(ctxMotivo, "#C9694F", "#D9A24B");
 
     chartMotivo = new Chart(ctxMotivo, {
       type: "bar",
@@ -1059,18 +966,18 @@ function inicializarGraficos() {
           x: {
             min: 0,
             max: 10,
-            ticks: { color: "#ffa500" },
-            grid: { color: "#ffa50055", borderDash: [3, 3] },
+            ticks: { color: "#D9A24B" },
+            grid: { color: "#D9A24B55", borderDash: [3, 3] },
           },
           y: {
-            ticks: { color: "#ffa500" },
+            ticks: { color: "#D9A24B" },
             grid: { display: false },
           },
         },
         plugins: {
-          legend: { labels: { color: "#ffa500" } },
+          legend: { labels: { color: "#D9A24B" } },
           tooltip: {
-            backgroundColor: "#ffa500cc",
+            backgroundColor: "#D9A24Bcc",
             titleColor: "#000",
             bodyColor: "#000",
             cornerRadius: 8,
@@ -1123,8 +1030,8 @@ function inicializarGraficoDashboard() {
   const consumoDiario = dias.map(d => datosPorDia[d].consumo);
   const satisfaccionDiaria = dias.map(d => datosPorDia[d].satisfaccion / datosPorDia[d].count);
 
-  const gradient1 = crearGradienteVertical(ctx, "#00ffe7", "#007acc");
-  const gradient2 = crearGradienteVertical(ctx, "#ff6384", "#ff1744");
+  const gradient1 = crearGradienteVertical(ctx, "#9CB380", "#1B241A");
+  const gradient2 = crearGradienteVertical(ctx, "#D9A24B", "#7A4A1E");
 
   chartDashboard = new Chart(ctx, {
     type: "line",
@@ -1134,7 +1041,7 @@ function inicializarGraficoDashboard() {
         {
           label: "Consumo (g)",
           data: consumoDiario,
-          borderColor: "#00ffe7",
+          borderColor: "#9CB380",
           backgroundColor: gradient1,
           fill: false,
           tension: 0.4,
@@ -1143,7 +1050,7 @@ function inicializarGraficoDashboard() {
         {
           label: "Satisfacción",
           data: satisfaccionDiaria,
-          borderColor: "#ff6384",
+          borderColor: "#D9A24B",
           backgroundColor: gradient2,
           fill: false,
           tension: 0.4,
@@ -1167,8 +1074,8 @@ function inicializarGraficoDashboard() {
           type: 'linear',
           display: true,
           position: 'left',
-          ticks: { color: "#00ffe7" },
-          grid: { color: "#00ffe755" },
+          ticks: { color: "#9CB380" },
+          grid: { color: "#9CB38055" },
         },
         y1: {
           type: 'linear',
@@ -1176,7 +1083,7 @@ function inicializarGraficoDashboard() {
           position: 'right',
           min: 0,
           max: 10,
-          ticks: { color: "#ff6384" },
+          ticks: { color: "#D9A24B" },
           grid: { drawOnChartArea: false },
         },
       },
@@ -1187,9 +1094,9 @@ function inicializarGraficoDashboard() {
           } 
         },
         tooltip: {
-          backgroundColor: "rgba(13, 17, 23, 0.9)",
-          titleColor: "#00ffe7",
-          bodyColor: "#c9d1d9",
+          backgroundColor: "rgba(18, 24, 15, 0.92)",
+          titleColor: "#9CB380",
+          bodyColor: "#F1EDE4",
           cornerRadius: 8,
         },
       },
@@ -1239,7 +1146,7 @@ function exportarPDF() {
     doc.text("🌿 Control Cannabis Pro", 105, 20, { align: "center" });
     
     doc.setFontSize(14);
-    doc.text(`Reporte Completo de ${usuarioEmail || "Usuario"}`, 105, 30, { align: "center" });
+    doc.text(`Reporte Completo de ${usuarioActual}`, 105, 30, { align: "center" });
     
     doc.setFontSize(10);
     doc.setTextColor(0, 0, 0);
@@ -1349,12 +1256,11 @@ function exportarPDF() {
     // Footer
     doc.setFontSize(8);
     doc.setTextColor(100, 100, 100);
-    doc.text(`© 2025 Control Cannabis Pro - ${usuarioEmail || "Usuario"}`, 105, 280, { align: "center" });
+    doc.text(`© 2025 Control Cannabis Pro - ${usuarioActual}`, 105, 280, { align: "center" });
     doc.text("Desarrollado por JJ Solutions - Tecnología e Innovación", 105, 285, { align: "center" });
     
     // Descargar automáticamente
-    const nombreArchivoBase = (usuarioEmail || "usuario").split("@")[0].replace(/[^a-zA-Z0-9_-]/g, "_");
-    const nombreArchivo = `Reporte_Cannabis_${nombreArchivoBase}_${new Date().toISOString().slice(0, 10)}.pdf`;
+    const nombreArchivo = `Reporte_Cannabis_${usuarioActual}_${new Date().toISOString().slice(0, 10)}.pdf`;
     doc.save(nombreArchivo);
     
     // Mensaje de éxito
@@ -1735,10 +1641,10 @@ function inicializarGraficoSocial() {
         {
           label: "Tu Bienestar",
           data: [promedioInteracciones, promedioDesempeno, promedioEstado, promedioSueno, promedioMotivacion, 10 - promedioEstres], // Estrés invertido para mejor visualización
-          backgroundColor: "rgba(121, 192, 255, 0.2)",
-          borderColor: "#79c0ff",
+          backgroundColor: "rgba(156, 179, 128, 0.2)",
+          borderColor: "#9CB380",
           borderWidth: 2,
-          pointBackgroundColor: "#79c0ff",
+          pointBackgroundColor: "#9CB380",
           pointBorderColor: "#fff",
           pointRadius: 5,
         },
@@ -1752,21 +1658,21 @@ function inicializarGraficoSocial() {
           min: 0,
           max: 10,
           ticks: { 
-            color: "#79c0ff", 
+            color: "#9CB380", 
             stepSize: 2,
             backdropColor: "transparent",
           },
-          grid: { color: "#79c0ff44" },
-          pointLabels: { color: "#79c0ff", font: { size: 12 } },
+          grid: { color: "#9CB38044" },
+          pointLabels: { color: "#9CB380", font: { size: 12 } },
         },
       },
       plugins: {
         legend: { 
-          labels: { color: "#79c0ff" },
+          labels: { color: "#9CB380" },
           position: 'bottom'
         },
         tooltip: {
-          backgroundColor: "#79c0ffcc",
+          backgroundColor: "#9CB380cc",
           titleColor: "#000",
           bodyColor: "#000",
           cornerRadius: 6,
@@ -1823,8 +1729,8 @@ function inicializarGraficoSocialTendencia() {
         {
           label: "Estado de Ánimo",
           data: animo,
-          borderColor: "#58a6ff",
-          backgroundColor: "rgba(88, 166, 255, 0.1)",
+          borderColor: "#D9A24B",
+          backgroundColor: "rgba(217, 162, 75, 0.1)",
           borderWidth: 3,
           fill: false,
           tension: 0.4,
@@ -1832,8 +1738,8 @@ function inicializarGraficoSocialTendencia() {
         {
           label: "Productividad",
           data: productividad,
-          borderColor: "#238636",
-          backgroundColor: "rgba(35, 134, 54, 0.1)",
+          borderColor: "#9CB380",
+          backgroundColor: "rgba(156, 179, 128, 0.1)",
           borderWidth: 2,
           fill: false,
           tension: 0.4,
@@ -1841,8 +1747,8 @@ function inicializarGraficoSocialTendencia() {
         {
           label: "Calidad Sueño",
           data: sueno,
-          borderColor: "#6f42c1",
-          backgroundColor: "rgba(111, 66, 193, 0.1)",
+          borderColor: "#A78BC9",
+          backgroundColor: "rgba(167, 139, 201, 0.1)",
           borderWidth: 2,
           fill: false,
           tension: 0.4,
@@ -1850,8 +1756,8 @@ function inicializarGraficoSocialTendencia() {
         {
           label: "Motivación",
           data: motivacion,
-          borderColor: "#20c997",
-          backgroundColor: "rgba(32, 201, 151, 0.1)",
+          borderColor: "#6FA8A0",
+          backgroundColor: "rgba(111, 168, 160, 0.1)",
           borderWidth: 2,
           fill: false,
           tension: 0.4,
@@ -1859,7 +1765,7 @@ function inicializarGraficoSocialTendencia() {
         {
           label: "Estrés",
           data: estres,
-          borderColor: "#f85149",
+          borderColor: "#C9694F",
           backgroundColor: "rgba(248, 81, 73, 0.1)",
           borderWidth: 2,
           fill: false,
@@ -1879,34 +1785,34 @@ function inicializarGraficoSocialTendencia() {
         y: {
           min: 0,
           max: 10,
-          ticks: { color: "#79c0ff", stepSize: 1 },
-          grid: { color: "#79c0ff44", borderDash: [3, 3] },
+          ticks: { color: "#9CB380", stepSize: 1 },
+          grid: { color: "#9CB38044", borderDash: [3, 3] },
           title: {
             display: true,
             text: 'Puntuación (1-10)',
-            color: "#79c0ff"
+            color: "#9CB380"
           }
         },
         x: {
-          ticks: { color: "#79c0ff" },
+          ticks: { color: "#9CB380" },
           grid: { display: false },
           title: {
             display: true,
             text: 'Tiempo',
-            color: "#79c0ff"
+            color: "#9CB380"
           }
         },
       },
       plugins: {
         legend: { 
-          labels: { color: "#79c0ff" },
+          labels: { color: "#9CB380" },
           position: 'top'
         },
         tooltip: {
-          backgroundColor: "#0d1117",
-          titleColor: "#79c0ff",
-          bodyColor: "#c9d1d9",
-          borderColor: "#79c0ff",
+          backgroundColor: "#12180F",
+          titleColor: "#9CB380",
+          bodyColor: "#F1EDE4",
+          borderColor: "#9CB380",
           borderWidth: 1,
           cornerRadius: 8,
           padding: 10,
@@ -1931,110 +1837,42 @@ tabs.forEach((btn) => {
   });
 });
 
-// Login (envío del formulario con correo/contraseña)
-if (loginForm) {
-  loginForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const email = (emailInput?.value || "").trim();
-    const password = passwordInput?.value || "";
-
-    if (!email || !password) {
-      if (loginMsg) loginMsg.textContent = "Ingresa tu correo y contraseña.";
+// Login
+if (loginBtn) {
+  loginBtn.addEventListener("click", () => {
+    const user = (usernameInput?.value || "").trim();
+    if (!user) {
+      if (loginMsg) loginMsg.textContent = "Por favor ingresa un nombre de usuario.";
       return;
     }
-
-    if (loginMsg) loginMsg.textContent = "Iniciando sesión...";
-    if (loginBtn) loginBtn.disabled = true;
-
-    auth
-      .signInWithEmailAndPassword(email, password)
-      .catch((err) => {
-        if (loginMsg) loginMsg.textContent = traducirErrorFirebase(err);
-      })
-      .finally(() => {
-        if (loginBtn) loginBtn.disabled = false;
-      });
+    usuarioActual = user;
+    if (loginMsg) loginMsg.textContent = `¡Bienvenido, ${usuarioActual}!`;
+    localStorage.setItem("usuarioActual", usuarioActual);
+    cargarDatos();
+    activarTabs(true);
+    cambiarTab("dashboard-tab");
+    limpiarLogin();
+    actualizarUI();
   });
 }
-
-// Crear cuenta
-if (registerBtn) {
-  registerBtn.addEventListener("click", () => {
-    const email = (emailInput?.value || "").trim();
-    const password = passwordInput?.value || "";
-
-    if (!email || !password) {
-      if (loginMsg) loginMsg.textContent = "Ingresa un correo y contraseña para crear tu cuenta.";
-      return;
-    }
-    if (password.length < 6) {
-      if (loginMsg) loginMsg.textContent = "La contraseña debe tener al menos 6 caracteres.";
-      return;
-    }
-
-    if (loginMsg) loginMsg.textContent = "Creando cuenta...";
-    registerBtn.disabled = true;
-
-    auth
-      .createUserWithEmailAndPassword(email, password)
-      .catch((err) => {
-        if (loginMsg) loginMsg.textContent = traducirErrorFirebase(err);
-      })
-      .finally(() => {
-        registerBtn.disabled = false;
-      });
-  });
-}
-
-/** Se ejecuta cuando Firebase Auth detecta una sesión iniciada */
-async function manejarSesionIniciada(user) {
-  usuarioActual = user.uid;
-  usuarioEmail = user.email;
-  if (loginMsg) loginMsg.textContent = `¡Bienvenido, ${usuarioEmail}!`;
-
-  activarTabs(true);
-  cambiarTab("dashboard-tab");
-  limpiarLogin();
-
-  await Promise.all([cargarDatos(), cargarDatosSocialRemoto()]);
-  actualizarUI();
-  setTimeout(resizeAllCharts, 50);
-}
-
-/** Se ejecuta cuando Firebase Auth detecta que no hay sesión (o se cerró) */
-function manejarSesionCerrada() {
-  usuarioActual = null;
-  usuarioEmail = null;
-  registros = [];
-  datosSocialesCache = [];
-
-  activarTabs(false);
-  cambiarTab("login-tab");
-  if (recordsList) recordsList.innerHTML = "";
-  if (recomendacionesBox) recomendacionesBox.innerHTML = "";
-  if (loginMsg) loginMsg.textContent = "";
-
-  // destruir gráficos
-  [chartSatisfaccion, chartConsumoMensual, chartCostoGramo, chartMetodo, chartMotivo, chartDesempenoSocial, chartSocialTendencia, chartDashboard]
-    .forEach((ch) => {
-      try { if (ch) ch.destroy(); } catch (e) {}
-    });
-  chartSatisfaccion = chartConsumoMensual = chartCostoGramo = chartMetodo = chartMotivo = chartDesempenoSocial = chartSocialTendencia = chartDashboard = null;
-}
-
-// Escucha los cambios de sesión de Firebase Auth (login, logout, y sesión persistente al recargar)
-auth.onAuthStateChanged((user) => {
-  if (user) {
-    manejarSesionIniciada(user);
-  } else {
-    manejarSesionCerrada();
-  }
-});
 
 // Logout
 if (logoutBtn) {
   logoutBtn.addEventListener("click", () => {
-    auth.signOut();
+    usuarioActual = null;
+    localStorage.removeItem("usuarioActual");
+    registros = [];
+    activarTabs(false);
+    cambiarTab("login-tab");
+    if (recordsList) recordsList.innerHTML = "";
+    if (recomendacionesBox) recomendacionesBox.innerHTML = "";
+    if (loginMsg) loginMsg.textContent = "";
+    // destruir gráficos
+    [chartSatisfaccion, chartConsumoMensual, chartCostoGramo, chartMetodo, chartMotivo, chartDesempenoSocial, chartSocialTendencia, chartDashboard]
+      .forEach((ch) => {
+        try { if (ch) ch.destroy(); } catch (e) {}
+      });
+    chartSatisfaccion = chartConsumoMensual = chartCostoGramo = chartMetodo = chartMotivo = chartDesempenoSocial = chartSocialTendencia = chartDashboard = null;
   });
 }
 
@@ -2115,10 +1953,51 @@ if (themeToggle) {
   themeToggle.addEventListener("click", toggleTheme);
 }
 
-// Botón flotante de acceso rápido a "Agregar registro"
-if (fabAdd) {
-  fabAdd.addEventListener("click", () => cambiarTab("add-tab"));
+// Theme toggle móvil
+if (themeToggleMobile) {
+  themeToggleMobile.addEventListener("click", toggleTheme);
 }
+
+// Menú hamburguesa
+if (hamburgerBtn) {
+  hamburgerBtn.addEventListener("click", toggleMenuMovil);
+}
+
+// Navegación móvil
+mobileNavButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    if (btn.disabled) return;
+    const tabId = btn.getAttribute("data-tab");
+    cambiarTab(tabId);
+  });
+});
+
+// Logout móvil
+if (logoutBtnMobile) {
+  logoutBtnMobile.addEventListener("click", () => {
+    usuarioActual = null;
+    localStorage.removeItem("usuarioActual");
+    registros = [];
+    activarTabs(false);
+    cambiarTab("login-tab");
+    if (recordsList) recordsList.innerHTML = "";
+    if (recomendacionesBox) recomendacionesBox.innerHTML = "";
+    if (loginMsg) loginMsg.textContent = "";
+    // destruir gráficos
+    [chartSatisfaccion, chartConsumoMensual, chartCostoGramo, chartMetodo, chartMotivo, chartDesempenoSocial, chartSocialTendencia, chartDashboard]
+      .forEach((ch) => {
+        try { if (ch) ch.destroy(); } catch (e) {}
+      });
+    chartSatisfaccion = chartConsumoMensual = chartCostoGramo = chartMetodo = chartMotivo = chartDesempenoSocial = chartSocialTendencia = chartDashboard = null;
+  });
+}
+
+// Cerrar menú móvil al hacer clic fuera
+document.addEventListener("click", (e) => {
+  if (mobileNav && !mobileNav.contains(e.target) && !hamburgerBtn.contains(e.target)) {
+    cerrarMenuMovil();
+  }
+});
 
 // Export PDF event
 if (exportPDFBtn) {
@@ -2130,10 +2009,16 @@ if (exportPDFBtn) {
    ========================= */
 window.addEventListener("load", () => {
   aplicarTemaGuardado();
-
-  // El estado de la pestaña de login/tabs y la carga de datos se maneja
-  // en auth.onAuthStateChanged, que se dispara automáticamente al cargar
-  // la página (con o sin sesión activa).
+  usuarioActual = localStorage.getItem("usuarioActual");
+  if (usuarioActual) {
+    activarTabs(true);
+    cambiarTab("dashboard-tab");
+    cargarDatos();
+    actualizarUI();
+  } else {
+    activarTabs(false);
+    cambiarTab("login-tab");
+  }
 
   // Mostrar botón de tema siempre
   if (themeToggle) {
