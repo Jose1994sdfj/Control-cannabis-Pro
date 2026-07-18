@@ -10,43 +10,40 @@
 </head>
 <body>
 
-<!-- ========== OVERLAY DE CARGA ========== -->
+<!-- ========== SPLASH ========== -->
 <div id="splash-overlay" class="splash">
     <div class="splash-content">
         <div class="splash-icon">⚖️</div>
         <h1>Weigh & Flow</h1>
-        <p id="splashStatus">Inicializando sensor óptico...</p>
+        <p id="splashStatus">Cargando...</p>
         <div class="loader-bar"><div class="loader-fill" id="loaderFill"></div></div>
-        <button id="skipCameraBtn" class="skip-btn" style="display:none;margin-top:20px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:10px 24px;border-radius:40px;font-family:inherit;cursor:pointer;font-size:14px;">
-            ⏭️ Usar modo demo
-        </button>
     </div>
 </div>
 
-<!-- ========== NAVEGACIÓN PRINCIPAL ========== -->
+<!-- ========== NAV ========== -->
 <nav class="bottom-nav" id="bottomNav">
-    <button class="nav-btn active" data-tab="tab-home" aria-label="Inicio">
+    <button class="nav-btn active" data-tab="tab-home">
         <span class="nav-icon">🏠</span>
         <span class="nav-label">Inicio</span>
     </button>
-    <button class="nav-btn" data-tab="tab-scan" aria-label="Escáner">
+    <button class="nav-btn" data-tab="tab-scan">
         <span class="nav-icon">📸</span>
         <span class="nav-label">Escáner</span>
     </button>
-    <button class="nav-btn" data-tab="tab-journal" aria-label="Diario">
+    <button class="nav-btn" data-tab="tab-journal">
         <span class="nav-icon">📓</span>
         <span class="nav-label">Diario</span>
     </button>
-    <button class="nav-btn" data-tab="tab-profile" aria-label="Perfil">
+    <button class="nav-btn" data-tab="tab-profile">
         <span class="nav-icon">👤</span>
         <span class="nav-label">Perfil</span>
     </button>
 </nav>
 
-<!-- ========== CONTENEDOR DE PANTALLAS ========== -->
+<!-- ========== MAIN ========== -->
 <main id="appContainer">
 
-    <!-- ======== TAB 1: HOME ======== -->
+    <!-- HOME -->
     <section id="tab-home" class="tab-panel active">
         <header class="panel-header">
             <div class="greeting">
@@ -56,7 +53,7 @@
                     <span class="sub-greeting">Tu dosis inteligente</span>
                 </div>
             </div>
-            <div class="health-badge" id="healthBadge">
+            <div class="health-badge">
                 <span>⚡</span> Tolerancia: <strong id="toleranceLevel">Media</strong>
             </div>
         </header>
@@ -102,7 +99,7 @@
         </div>
     </section>
 
-    <!-- ======== TAB 2: ESCÁNER ======== -->
+    <!-- SCAN -->
     <section id="tab-scan" class="tab-panel">
         <header class="panel-header">
             <h2>📸 Escáner de peso</h2>
@@ -111,15 +108,18 @@
 
         <div class="scanner-container">
             <div class="camera-wrapper" id="cameraWrapper">
-                <video id="video" autoplay playsinline muted></video>
+                <video id="video" autoplay playsinline muted style="display:none;"></video>
                 <canvas id="overlayCanvas"></canvas>
                 <div class="scan-guide" id="scanGuide">
                     <div class="guide-box" id="guideBox">
-                        <span class="guide-text">🪙 Coloca la moneda AQUÍ</span>
+                        <span class="guide-text">📷 Coloca la moneda AQUÍ</span>
                         <div class="coin-reference"></div>
+                        <button id="demoModeBtn" class="demo-btn" style="margin-top:16px;background:rgba(139,124,247,0.2);border:1px solid rgba(139,124,247,0.3);color:#fff;padding:8px 20px;border-radius:40px;font-family:inherit;cursor:pointer;font-size:13px;pointer-events:auto;">
+                            🧪 Usar modo demo
+                        </button>
                     </div>
                 </div>
-                <button class="capture-btn" id="captureBtn" aria-label="Capturar">
+                <button class="capture-btn" id="captureBtn">
                     <span class="capture-ring"></span>
                     <span class="capture-inner">📷</span>
                 </button>
@@ -159,7 +159,7 @@
         </div>
     </section>
 
-    <!-- ======== TAB 3: DIARIO ======== -->
+    <!-- JOURNAL -->
     <section id="tab-journal" class="tab-panel">
         <header class="panel-header">
             <h2>📓 Diario de consumo</h2>
@@ -178,7 +178,7 @@
         </div>
     </section>
 
-    <!-- ======== TAB 4: PERFIL ======== -->
+    <!-- PROFILE -->
     <section id="tab-profile" class="tab-panel">
         <header class="panel-header">
             <h2>👤 Mi perfil</h2>
