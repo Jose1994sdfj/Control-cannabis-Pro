@@ -18,8 +18,6 @@
     --amber: #fbbf24;
     --red: #f87171;
     --radius: 20px;
-    --shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
-    --transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 body {
@@ -29,72 +27,6 @@ body {
     min-height: 100vh;
     padding-bottom: 90px;
     overflow-x: hidden;
-    -webkit-font-smoothing: antialiased;
-}
-
-/* SPLASH */
-.splash {
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-    background: var(--bg-primary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: opacity 0.8s ease, visibility 0.8s ease;
-}
-.splash.hidden {
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-}
-.splash-content {
-    text-align: center;
-    padding: 40px;
-}
-.splash-icon {
-    font-size: 64px;
-    display: block;
-    margin-bottom: 16px;
-}
-.splash-content h1 {
-    font-size: 32px;
-    font-weight: 700;
-    background: linear-gradient(135deg, var(--accent), #a78bfa);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-.splash-content p {
-    color: var(--text-secondary);
-    font-size: 14px;
-    margin: 8px 0 24px;
-}
-.loader-bar {
-    width: 200px;
-    height: 4px;
-    background: var(--bg-secondary);
-    border-radius: 4px;
-    overflow: hidden;
-    margin: 0 auto;
-}
-.loader-fill {
-    height: 100%;
-    width: 0%;
-    background: linear-gradient(90deg, var(--accent), #a78bfa);
-    border-radius: 4px;
-    transition: width 0.3s ease;
-}
-
-.demo-btn {
-    pointer-events: auto !important;
-    position: relative;
-    z-index: 20;
-}
-.demo-btn:hover {
-    background: rgba(139,124,247,0.35) !important;
-}
-.demo-btn:active {
-    transform: scale(0.95);
 }
 
 /* BOTTOM NAV */
@@ -125,13 +57,13 @@ body {
     padding: 8px 16px;
     border-radius: 30px;
     cursor: pointer;
-    transition: var(--transition);
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
     font-family: inherit;
     flex: 1;
 }
-.nav-btn .nav-icon { font-size: 22px; line-height: 1; transition: var(--transition); }
+.nav-btn .nav-icon { font-size: 22px; line-height: 1; transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .nav-btn .nav-label { font-size: 10px; font-weight: 500; letter-spacing: 0.3px; }
-.nav-btn.active { color: #fff; background: var(--bg-elevated); }
+.nav-btn.active { color: #fff; background: #26263a; }
 .nav-btn.active .nav-icon { transform: translateY(-2px); }
 .nav-btn:active { transform: scale(0.92); }
 
@@ -182,7 +114,7 @@ body {
     align-items: center;
     gap: 12px;
     border: 1px solid rgba(255,255,255,0.03);
-    transition: var(--transition);
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .stat-card:active { transform: scale(0.96); }
 .stat-icon { font-size: 24px; }
@@ -219,7 +151,7 @@ body {
     justify-content: space-between;
     align-items: center;
     border: 1px solid rgba(255,255,255,0.03);
-    transition: var(--transition);
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .session-item:active { transform: scale(0.98); }
 .session-left { display: flex; align-items: center; gap: 12px; }
@@ -305,7 +237,7 @@ body {
     text-align: center;
     background: rgba(0,0,0,0.3);
     backdrop-filter: blur(4px);
-    pointer-events: auto;
+    pointer-events: none;
 }
 .coin-reference {
     width: 48px;
@@ -330,7 +262,7 @@ body {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: var(--transition);
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
     z-index: 10;
     pointer-events: auto;
 }
@@ -393,7 +325,7 @@ body {
     font-size: 14px;
     font-family: inherit;
     width: 160px;
-    transition: var(--transition);
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .strain-input:focus {
     outline: none;
@@ -413,7 +345,7 @@ body {
     font-size: 15px;
     font-family: inherit;
     cursor: pointer;
-    transition: var(--transition);
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .btn-primary {
     background: var(--accent);
@@ -456,7 +388,7 @@ body {
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    transition: var(--transition);
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
     font-family: inherit;
 }
 .filter-btn.active {
@@ -518,7 +450,7 @@ body {
     font-size: 12px;
     font-weight: 500;
     cursor: pointer;
-    transition: var(--transition);
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
     font-family: inherit;
 }
 .tol-btn.active, .unit-btn.active {
@@ -542,7 +474,7 @@ body {
     inset: 0;
     background: var(--bg-elevated);
     border-radius: 40px;
-    transition: var(--transition);
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .toggle-slider::before {
     content: "";
@@ -553,7 +485,7 @@ body {
     bottom: 4px;
     background: #fff;
     border-radius: 50%;
-    transition: var(--transition);
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .toggle-switch input:checked + .toggle-slider {
     background: var(--accent);
