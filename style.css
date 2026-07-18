@@ -52,6 +52,7 @@ body {
 .splash-content {
     text-align: center;
     animation: pulseGlow 2s ease-in-out infinite;
+    padding: 40px;
 }
 .splash-icon {
     font-size: 64px;
@@ -84,6 +85,18 @@ body {
     background: linear-gradient(90deg, var(--accent), #a78bfa);
     border-radius: 4px;
     transition: width 0.3s ease;
+}
+.skip-btn {
+    display: none !important;
+}
+.skip-btn.visible {
+    display: inline-block !important;
+}
+.skip-btn:hover {
+    background: rgba(255,255,255,0.2) !important;
+}
+.skip-btn:active {
+    transform: scale(0.95);
 }
 
 @keyframes pulseGlow {
@@ -402,6 +415,7 @@ body {
 .detail-row {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     font-size: 14px;
     color: var(--text-secondary);
     padding: 6px 0;
